@@ -1,5 +1,5 @@
 import { useUser } from "@/contexts/UserContext";
-import { Atom, CircleUserRound, Tv, UserRound } from "lucide-react";
+import { CircleUserRound, Search, Tv } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
@@ -17,19 +17,29 @@ const Navbar = () => {
         </h1>
       </Link>
 
-      <Link href={user ? "/account" : "/sign-in"}>
-        {user && profile?.avatar_url ? (
-          <Image
-            src={profile.avatar_url}
-            alt="user-image"
-            width={30}
-            height={30}
-            className="rounded-full"
-          />
-        ) : (
-          <CircleUserRound size={30} />
-        )}
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/search"
+          className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors"
+        >
+          <Search size={20} />
+          <span className="hidden sm:inline">Search</span>
+        </Link>
+
+        <Link href={user ? "/account" : "/sign-in"}>
+          {user && profile?.avatar_url ? (
+            <Image
+              src={profile.avatar_url}
+              alt="user-image"
+              width={30}
+              height={30}
+              className="rounded-full"
+            />
+          ) : (
+            <CircleUserRound size={30} />
+          )}
+        </Link>
+      </div>
     </div>
   );
 };

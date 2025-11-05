@@ -1,4 +1,4 @@
-import { Clock, Heart, History, House, ListVideo } from "lucide-react";
+import { Clock, Heart, History, House, ListVideo, Search } from "lucide-react";
 
 export const projectName = "FlixStream";
 
@@ -8,6 +8,12 @@ export const routes = [
     href: "/",
     label: "Home",
     icon: House,
+  },
+  {
+    id: "search",
+    href: "/search",
+    label: "Search",
+    icon: Search,
   },
   {
     id: "history",
