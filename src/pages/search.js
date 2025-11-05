@@ -17,6 +17,8 @@ const Search = () => {
     queryKey: ["rule34-search", q, currentPage],
     queryFn: () => searchRule34Videos(q, currentPage),
     enabled: !!q,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const handleSearch = (e) => {
@@ -74,8 +76,17 @@ const Search = () => {
       )}
 
       {error && (
-        <div className="text-center py-20 text-red-400">
-          Failed to load videos. Please try again.
+        <div className="text-center py-20">
+          <div className="text-red-400 mb-2">Failed to load videos</div>
+          <div className="text-sm text-neutral-400">
+            {error.message || "Please check your connection and try again"}
+          </div>
+          <button
+            onClick={() => router.reload()}
+            className="mt-4 px-6 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
         </div>
       )}
 
