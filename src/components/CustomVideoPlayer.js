@@ -365,14 +365,6 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img ref={thumbnailImgRef} className="thumbnail-img" alt="" />
-      {showPreview && previewTime !== null && (
-        <video
-          ref={previewVideoRef}
-          className="preview-video"
-          muted
-          playsInline
-        />
-      )}
       <div className="video-controls-container">
         <div
           ref={timelineContainerRef}
@@ -384,6 +376,14 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
           <div className="timeline">
             <div className="thumb-indicator"></div>
           </div>
+          {showPreview && previewTime !== null && (
+            <video
+              ref={previewVideoRef}
+              className="preview-video"
+              muted
+              playsInline
+            />
+          )}
         </div>
         <div className="controls">
           <button className="play-pause-btn" onClick={togglePlay}>

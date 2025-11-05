@@ -220,12 +220,17 @@ video {
   aspect-ratio: 1 / 1;
 }
 
+.timeline-container {
+  position: relative;
+}
+
 .preview-video {
   position: absolute;
   height: 80px;
   aspect-ratio: 16 / 9;
-  top: -1rem;
-  transform: translate(-50%, -100%);
+  bottom: 100%;
+  margin-bottom: 0.5rem;
+  transform: translateX(-50%);
   left: calc(var(--preview-position) * 100%);
   border-radius: .25rem;
   border: 2px solid white;
