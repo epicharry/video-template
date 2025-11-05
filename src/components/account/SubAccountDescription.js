@@ -1,17 +1,33 @@
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Button from "../Button";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/contexts/UserContext";
-import { useSubscribe } from "@/axios/api";
+import { subscribe, getSubscriptionStatus } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
-const SubAccountDescription = ({ user, preview }) => {
+const SubAccountDescription = ({ channelUser, preview }) => {
   const { user: loggedInUser } = useUser();
-  const [isSubscribed, setIsSubscribed] = useState(true);
-  const { mutate } = useSubscribe(setIsSubscribed);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const { data: subStatus } = useQuery({
+    queryKey: ['subscription-status', loggedInUser?.id, channelUser?.id],
+    queryFn: () => getSubscriptionStatus(loggedInUser?.id, channelUser?.id),
+    enabled: !!loggedInUser?.id && !!channelUser?.id,
+  });
+
+  useEffect(() => {
+    if (subStatus !== undefined) {
+      setIsSubscribed(subStatus);
+    }
+  }, [subStatus]);
 
   const updateSubscription = async () => {
-    mutate({ userId: user?.userId, subscriberId: loggedInUser?.userId });
+    if (!loggedInUser || !channelUser) return;
+    const result = await subscribe(loggedInUser.id, channelUser.id);
+    if (result !== null) {
+      setIsSubscribed(result);
+    }
   };
 
   return (
@@ -19,7 +35,7 @@ const SubAccountDescription = ({ user, preview }) => {
       <div className="relative group w-24 h-24 md:w-[150px] md:h-[150px]">
         <Image
           src={preview}
-          alt={`${user?.username}'s avatar`}
+          alt={`${channelUser?.username}'s avatar`}
           fill
           priority
           className="object-cover rounded-full"
@@ -27,9 +43,9 @@ const SubAccountDescription = ({ user, preview }) => {
       </div>
       <div className="space-y-2 flex flex-col justify-center">
         <h1 className="text-xl md:text-3xl font-bold tracking-tight">
-          {user?.username}
+          {channelUser?.username}
         </h1>
-        <p className="text-xs text-neutral-400">&#x2022; {user?.email} </p>
+        <p className="text-xs text-neutral-400">&#x2022; {channelUser?.email} </p>
         <Button
           onClick={updateSubscription}
           variant={isSubscribed ? "secondary" : "tertiary"}

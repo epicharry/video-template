@@ -1,6 +1,5 @@
-import axiosToken from "@/axios/tokenAxios";
-import { constants } from "@/constants";
 import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
@@ -10,10 +9,10 @@ import toast from "react-hot-toast";
 import Loading from "../Loading";
 
 const AccountDescription = () => {
-  const { user, addUserData } = useUser();
+  const { user, profile } = useUser();
   const imgRef = useRef(null);
   const [preview, setPreview] = useState(
-    user && user?.avatarURL ? user.avatarURL : "/default-user.jpg"
+    profile?.avatar_url || "/default-user.jpg"
   );
 
   const handleClick = () => {
@@ -24,39 +23,40 @@ const AccountDescription = () => {
     mutationFn: async (e) => {
       const file = e.target.files?.[0];
       if (!file) {
-        toast.error("Please uplaod a file");
+        toast.error("Please upload a file");
         return;
       }
 
       try {
-        const formData = new FormData();
-        formData.append("avatar", file);
-        const response = await axiosToken.post(
-          constants.apiURL + "/user/upload-avatar",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
 
-        if (response.status != 200) {
-          setPreview(response.data.imageUrl);
-          toast.success("Avatar updated!");
-        }
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('id', user.id);
+
+        if (updateError) throw updateError;
+
+        setPreview(publicUrl);
+        toast.success("Avatar updated!");
+        return publicUrl;
       } catch (error) {
-        console.log(error);
+        console.error(error);
         toast.error("Avatar update failed!");
+        throw error;
       }
-    },
-    onSuccess: async () => {
-      const getUser = await axiosToken.get(
-        constants.apiURL + `/user/${user?.userId}`
-      );
-      await addUserData(getUser.data);
-      // Invalidate and refetch the 'todos' query after successful mutation
-      // queryClient.invalidateQueries({ queryKey: ["todos"] });
     },
   });
 
@@ -89,7 +89,7 @@ const AccountDescription = () => {
       />
       <div className="space-y-2 flex flex-col justify-center">
         <h1 className="text-xl md:text-3xl font-bold tracking-tight">
-          {user?.username}
+          {profile?.username}
         </h1>
         <p className="text-xs text-neutral-400">&#x2022; {user?.email} </p>
       </div>

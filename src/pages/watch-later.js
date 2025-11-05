@@ -1,37 +1,33 @@
-import { likeVideo } from "@/axios/api";
 import SignedOutUI from "@/components/signed-out/SavedVideos";
 import VideoCard from "@/components/VideoCard";
-import { constants } from "@/constants";
 import { useUser } from "@/contexts/UserContext";
-import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
-import { useRouter } from "next/router";
-import { useState } from "react";
+import { getWatchLater, saveToWatchLater } from "@/lib/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 
 const menuItems = [{ icon: Trash2, label: "Remove", id: "save" }];
 
-const WatchLater = ({ data, error }) => {
+const WatchLater = () => {
   const { user } = useUser();
-  const router = useRouter();
-  const [userSaved, setUserSaved] = useState(data?.savedVideos);
+
+  const { data: watchLaterData, refetch } = useQuery({
+    queryKey: ['watch-later', user?.id],
+    queryFn: () => getWatchLater(user?.id),
+    enabled: !!user?.id,
+  });
+
   const { mutate } = useMutation({
-    mutationFn: async ({ videoId, action }) => {
-      await likeVideo(user.userId, videoId, action, router);
-      return { videoId, action };
+    mutationFn: async ({ videoId }) => {
+      await saveToWatchLater(user.id, videoId);
+      return { videoId };
     },
-    onSuccess: ({ videoId, action }) => {
-      if (action === "save") {
-        setUserSaved((prev) => prev.filter((vid) => vid._id != videoId));
-      }
+    onSuccess: () => {
+      refetch();
     },
   });
-  if (!user || (error && error[0] === 401)) {
-    return <SignedOutUI />;
-  }
 
-  if (error) {
-    return <p>{error[1]}</p>;
+  if (!user) {
+    return <SignedOutUI />;
   }
 
   let noSavedVids = (
@@ -46,14 +42,14 @@ const WatchLater = ({ data, error }) => {
         Saved Videos
       </h1>
       <div className="space-y-4 mt-4 max-w-3xl">
-        {userSaved.length > 0
-          ? userSaved.map((vid) => (
+        {watchLaterData && watchLaterData.length > 0
+          ? watchLaterData.map((item) => (
               <VideoCard
-                key={vid.id}
-                vid={vid}
+                key={item.video.id}
+                vid={item.video}
                 uploader={{
-                  uploaderName: data.userName,
-                  uploaderAvatar: data.userAvatar,
+                  uploaderName: item.video.profile?.username,
+                  uploaderAvatar: item.video.profile?.avatar_url,
                 }}
                 menuItems={menuItems}
                 mutate={mutate}
@@ -66,29 +62,3 @@ const WatchLater = ({ data, error }) => {
 };
 
 export default WatchLater;
-
-export async function getServerSideProps({ req }) {
-  try {
-    const response = await axios.get(
-      constants.apiURL + "/user/savedVideos/user",
-      {
-        headers: {
-          Cookie: req.headers.cookie,
-        },
-        withCredentials: true,
-      }
-    );
-
-    return {
-      props: {
-        data: response.data || {},
-      },
-    };
-  } catch (error) {
-    return {
-      props: {
-        error: [error.status, error.response.data.message],
-      },
-    };
-  }
-}

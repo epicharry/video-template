@@ -1,7 +1,5 @@
-import { constants } from "@/constants";
 import { schema } from "@/schema/validationSchema";
 import { yupResolver } from "@hookform/resolvers/yup";
-import axios from "axios";
 import { FormProvider, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import Backdrop from "../Backdrop";
@@ -38,37 +36,7 @@ const CreateContent = () => {
   } = methods;
 
   const onSubmit = async (data) => {
-    const { video, title, description } = data;
-    const formData = new FormData();
-    formData.append("video", video[0]);
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("userId", userId);
-
-    try {
-      const res = await axios.post(`${constants.apiURL}/upload`, formData, {
-        withCredentials: true,
-        headers: {
-          "x-title": title,
-          "x-user-id": userId,
-        },
-        onUploadProgress: (progressEvent) => {
-          console.log(progressEvent);
-          const percentage = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setUploadProgress(percentage);
-        },
-      });
-      if (res.status != 200) {
-        toast.error("Some error occured!");
-        return;
-      }
-      toast.success("Upload successful!");
-      reset(defaultValues);
-    } catch (error) {
-      console.log(error);
-    }
+    toast.error("Video upload functionality needs to be implemented with Supabase Storage");
   };
 
   return (

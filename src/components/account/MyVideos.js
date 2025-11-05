@@ -1,4 +1,5 @@
-import { getUserVideos } from "@/axios/api";
+import { getUserVideos } from "@/lib/api";
+import { useUser } from "@/contexts/UserContext";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistance } from "date-fns";
 import Link from "next/link";
@@ -6,19 +7,21 @@ import Loading from "../Loading";
 import VideoPlayer from "../VideoPlayer";
 
 const MyVideos = () => {
+  const { user } = useUser();
   const { isPending, error, data } = useQuery({
-    queryKey: ["user-uploaded-videos"],
-    queryFn: getUserVideos,
+    queryKey: ["user-uploaded-videos", user?.id],
+    queryFn: () => getUserVideos(user?.id),
+    enabled: !!user?.id,
   });
 
   const videos = data?.map((video) => (
-    <Link key={video._id} href={`/video/${video.slug}`} className="space-y-1">
+    <Link key={video.id} href={`/video/${video.slug}`} className="space-y-1">
       <div>
-        <VideoPlayer src={video.hlsUrl} />
+        <VideoPlayer src={video.hls_url || video.video_url} />
       </div>
       <h3 className="text-sm font-medium">{video.title}</h3>
       <p className="text-xs text-neutral-400">
-        {formatDistance(new Date(video.createdAt), new Date(), {
+        {formatDistance(new Date(video.created_at), new Date(), {
           addSuffix: true,
         })}
       </p>

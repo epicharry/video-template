@@ -2,13 +2,12 @@ import Layout from "@/components/layouts";
 import MainVideoPlayer from "@/components/MainVideoPlayer";
 import SuggestedVideos from "@/components/SuggestedVideos";
 import VideoDescription from "@/components/VideoDescription";
-import { constants } from "@/constants";
-import axios from "axios";
+import { getVideoBySlug } from "@/lib/api";
 import React from "react";
 
 const VideoName = ({ video, error }) => {
-  if (error) {
-    return <div> Error</div>;
+  if (error || !video) {
+    return <div className="text-center py-20">Video not found</div>;
   }
 
   return (
@@ -30,12 +29,14 @@ VideoName.getLayout = function getLayout(page) {
 
 export async function getServerSideProps({ params }) {
   try {
-    const path = `${constants.apiURL}/video/${params.videoSlug}`;
-    const res = await axios.get(path);
-    return { props: { video: res.data } };
+    const video = await getVideoBySlug(params.videoSlug);
+    if (!video) {
+      return { props: { error: "Video not found" } };
+    }
+    return { props: { video } };
   } catch (error) {
-    console.log(error);
-    return { props: { error: "Failed to fetch URL" } };
+    console.error('Error fetching video:', error);
+    return { props: { error: "Failed to fetch video" } };
   }
 }
 

@@ -1,12 +1,9 @@
-import { likeVideo } from "@/axios/api";
 import SignedOutUI from "@/components/signed-out/LikedVideos";
 import VideoCard from "@/components/VideoCard";
-import { constants } from "@/constants";
 import { useUser } from "@/contexts/UserContext";
-import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { getLikedVideos, likeVideo as likeVideoAPI, saveToWatchLater } from "@/lib/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { useState } from "react";
 import { Timer, Trash2 } from "lucide-react";
 
 const menuItems = [
@@ -14,28 +11,32 @@ const menuItems = [
   { icon: Timer, label: "Add to Watch Later", id: "save" },
 ];
 
-const LikedVideos = ({ data, error }) => {
+const LikedVideos = () => {
   const { user } = useUser();
   const router = useRouter();
-  const [userLiked, setUserLiked] = useState(data?.likedVideos);
+
+  const { data: likedData, refetch } = useQuery({
+    queryKey: ['liked-videos', user?.id],
+    queryFn: () => getLikedVideos(user?.id),
+    enabled: !!user?.id,
+  });
+
   const { mutate } = useMutation({
     mutationFn: async ({ videoId, action }) => {
-      await likeVideo(user.userId, videoId, action, router);
+      if (action === "like") {
+        await likeVideoAPI(user.id, videoId);
+      } else if (action === "save") {
+        await saveToWatchLater(user.id, videoId);
+      }
       return { videoId, action };
     },
-    onSuccess: ({ videoId, action }) => {
-      if (action === "like") {
-        setUserLiked((prev) => prev.filter((vid) => vid._id != videoId));
-      }
+    onSuccess: () => {
+      refetch();
     },
   });
 
-  if (!user || (error && error[0] === 401)) {
+  if (!user) {
     return <SignedOutUI />;
-  }
-
-  if (error) {
-    return <p>{error[1]}</p>;
   }
 
   let noLikedVids = (
@@ -50,14 +51,14 @@ const LikedVideos = ({ data, error }) => {
         Liked Videos
       </h1>
       <div className="space-y-4 mt-4 max-w-3xl">
-        {userLiked.length > 0
-          ? userLiked.map((vid) => (
+        {likedData && likedData.length > 0
+          ? likedData.map((item) => (
               <VideoCard
-                key={vid.id}
-                vid={vid}
+                key={item.video.id}
+                vid={item.video}
                 uploader={{
-                  uploaderName: data.userName,
-                  uploaderAvatar: data.userAvatar,
+                  uploaderName: item.video.profile?.username,
+                  uploaderAvatar: item.video.profile?.avatar_url,
                 }}
                 menuItems={menuItems}
                 mutate={mutate}
@@ -70,29 +71,3 @@ const LikedVideos = ({ data, error }) => {
 };
 
 export default LikedVideos;
-
-export async function getServerSideProps({ req }) {
-  try {
-    const response = await axios.get(
-      constants.apiURL + "/user/likedVideos/user",
-      {
-        headers: {
-          Cookie: req.headers.cookie,
-        },
-        withCredentials: true,
-      }
-    );
-
-    return {
-      props: {
-        data: response.data || {},
-      },
-    };
-  } catch (error) {
-    return {
-      props: {
-        error: [error.status, error.response.data.message],
-      },
-    };
-  }
-}

@@ -2,10 +2,6 @@ import { Clock, Heart, History, House, ListVideo } from "lucide-react";
 
 export const projectName = "FlixStream";
 
-export const constants = {
-  apiURL: process.env.NEXT_PUBLIC_API_URL,
-};
-
 export const routes = [
   {
     id: "home",

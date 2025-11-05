@@ -1,15 +1,13 @@
 import Button from "@/components/Button";
 import Layout from "@/components/layouts";
 import TextField from "@/components/TextField";
-import { constants } from "@/constants";
 import { registerSchema } from "@/schema/registerSchema";
 import { yupResolver } from "@hookform/resolvers/yup";
-import axios from "axios";
-import { getCookie } from "cookies-next/server";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { FormProvider, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
 
 const Register = () => {
   const methods = useForm({
@@ -25,24 +23,34 @@ const Register = () => {
   } = methods;
 
   const onSubmit = async (data) => {
-    const { cpassword, ...rest } = data;
-    const body = JSON.stringify(rest);
+    const { cpassword, username, email, password } = data;
 
     try {
-      const res = await axios.post(constants.apiURL + "/user/register", body, {
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
       });
 
-      if (res.status === 201) {
-        reset();
-        toast.success("Registered successfully, Please sign in.");
-        router.push("/sign-in");
-      }
+      if (authError) throw authError;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: authData.user.id,
+            username,
+            avatar_url: null,
+          },
+        ]);
+
+      if (profileError) throw profileError;
+
+      reset();
+      toast.success("Registered successfully, Please sign in.");
+      router.push("/sign-in");
     } catch (error) {
-      const message = error.response.data.message || "Something went wrong!";
-      toast.error(message);
+      console.error(error);
+      toast.error(error.message || "Something went wrong!");
     }
   };
 
@@ -109,26 +117,3 @@ Register.getLayout = function getLayout(page) {
 };
 
 export default Register;
-
-export async function getServerSideProps({ req, res }) {
-  try {
-    const token = await getCookie("token", { req, res });
-    if (token) {
-      return {
-        redirect: {
-          destination: "/account",
-          permanent: false,
-        },
-      };
-    }
-
-    return {
-      props: {},
-    };
-  } catch (error) {
-    console.error("GSSP Error (Register):", error);
-    return {
-      props: {},
-    };
-  }
-}

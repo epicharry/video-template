@@ -1,51 +1,42 @@
 import Button from "@/components/Button";
 import Layout from "@/components/layouts";
 import TextField from "@/components/TextField";
-import { constants, messages } from "@/constants";
-import { useUser } from "@/contexts/UserContext";
 import { loginSchema } from "@/schema/loginSchema";
 import { yupResolver } from "@hookform/resolvers/yup";
-import axios from "axios";
-import { getCookie } from "cookies-next/server";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { FormProvider, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
 
 const SignIn = () => {
   const router = useRouter();
   const methods = useForm({
     resolver: yupResolver(loginSchema),
   });
-  const { addUserData } = useUser();
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = methods;
 
   const onSubmit = async (data) => {
     const { password, email } = data;
-    const body = JSON.stringify({ email, password });
 
     try {
-      const res = await axios.post(constants.apiURL + "/user/login", body, {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      if (res.status != 200) {
-        console.log("signin failed");
-      } else {
-        await addUserData(res.data);
-        router.push("/account");
-      }
+
+      if (error) throw error;
+
+      toast.success("Signed in successfully");
+      router.push("/account");
     } catch (error) {
-      console.log(error);
-      const msg = error.response.data.message || messages.error;
-      toast.error(msg);
+      console.error(error);
+      toast.error(error.message || "Failed to sign in");
     }
   };
 
@@ -73,14 +64,7 @@ const SignIn = () => {
               error={errors.password?.message}
             />
 
-            <Link
-              href="/forgot-password"
-              className="text-neutral-400 text-xs mt-2 block text-right hover:underline"
-            >
-              Forgot password?
-            </Link>
-
-            <Button type="submit" className="block w-full">
+            <Button type="submit" disabled={isSubmitting} className="block w-full disabled:opacity-50">
               Sign In
             </Button>
           </form>
@@ -101,28 +85,3 @@ SignIn.getLayout = function getLayout(page) {
 };
 
 export default SignIn;
-
-export async function getServerSideProps({ req, res }) {
-  try {
-    const token = await getCookie("token", { req, res });
-    console.log("token", token);
-
-    if (token) {
-      return {
-        redirect: {
-          destination: "/account",
-          permanent: false,
-        },
-      };
-    }
-
-    return {
-      props: {},
-    };
-  } catch (error) {
-    console.error("GSSP Error (Signin):", error);
-    return {
-      props: {},
-    };
-  }
-}

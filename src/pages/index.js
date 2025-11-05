@@ -1,22 +1,25 @@
 import VideoPlayer from "@/components/VideoPlayer";
-import { constants } from "@/constants";
-import axios from "axios";
+import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function Home({ allVideos, error }) {
   if (error) {
-    return <div>Error</div>;
+    return <div className="text-center py-20">Error loading videos</div>;
+  }
+
+  if (!allVideos || allVideos.length === 0) {
+    return <div className="text-center py-20 text-neutral-400">No videos available</div>;
   }
 
   let videos = allVideos.map((video) => (
-    <Link key={video._id} href={`/video/${video.slug}`}>
+    <Link key={video.id} href={`/video/${video.slug}`}>
       <div>
-        <VideoPlayer src={video.hlsUrl} />
+        <VideoPlayer src={video.hls_url || video.video_url} />
       </div>
       <div className="flex gap-2 mt-3 text-sm">
         <Image
-          src={video.userId?.avatarURL ?? "/default-user.jpg"}
+          src={video.profile?.avatar_url ?? "/default-user.jpg"}
           alt="default user image"
           width={35}
           height={35}
@@ -24,7 +27,7 @@ export default function Home({ allVideos, error }) {
         />
         <div>
           <h3 className="tracking-wide">{video.title}</h3>
-          <p className="text-neutral-400">{video.userId?.username}</p>
+          <p className="text-neutral-400">{video.profile?.username}</p>
         </div>
       </div>
     </Link>
@@ -39,12 +42,19 @@ export default function Home({ allVideos, error }) {
 
 export async function getServerSideProps() {
   try {
-    const res = await axios.get(`${constants.apiURL}/videos`);
-    if (res.status != 200) {
-      throw new Error("Error fetching videos");
-    }
-    return { props: { allVideos: res.data } };
+    const { data, error } = await supabase
+      .from('videos')
+      .select(`
+        *,
+        profile:profiles(username, avatar_url)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return { props: { allVideos: data || [] } };
   } catch (error) {
-    return { props: { error: "Failed to Fetch!" } };
+    console.error('Error fetching videos:', error);
+    return { props: { allVideos: [], error: "Failed to fetch videos" } };
   }
 }

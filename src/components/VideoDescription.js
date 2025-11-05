@@ -2,91 +2,74 @@ import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import Button from "./Button";
 import { Bookmark, ThumbsUp } from "lucide-react";
-import axiosToken from "@/axios/tokenAxios";
-import { constants, messages } from "@/constants";
 import { useRouter } from "next/router";
-import toast from "react-hot-toast";
 import { useUser } from "@/contexts/UserContext";
-import { saveHistory, useSubscribe, useSubscriptionStatus } from "@/axios/api";
+import { likeVideo as likeVideoAPI, saveToWatchLater, saveHistory, subscribe, getSubscriptionStatus, getSubscriberCount } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 const VideoDescription = ({ media }) => {
   const router = useRouter();
   const { user } = useUser();
-  const { mutate } = useSubscribe();
-  const { data, status } = useSubscriptionStatus({
-    userId: media.userId._id,
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriberCount, setSubscriberCount] = useState(0);
+
+  const { data: subStatus } = useQuery({
+    queryKey: ['subscription-status', user?.id, media?.profile?.id],
+    queryFn: () => getSubscriptionStatus(user?.id, media?.profile?.id),
+    enabled: !!user?.id && !!media?.profile?.id,
   });
-  const [isSubscribed, setIsSubscribed] = useState(null);
+
+  const { data: subCount } = useQuery({
+    queryKey: ['subscriber-count', media?.profile?.id],
+    queryFn: () => getSubscriberCount(media?.profile?.id),
+    enabled: !!media?.profile?.id,
+  });
 
   useEffect(() => {
-    if (status === "success" && data?.data) {
-      setIsSubscribed(data.data.subscribed);
+    if (subStatus !== undefined) {
+      setIsSubscribed(subStatus);
     }
-  }, [data, status]);
+  }, [subStatus]);
+
+  useEffect(() => {
+    if (subCount !== undefined) {
+      setSubscriberCount(subCount);
+    }
+  }, [subCount]);
 
   const checkAuth = () => {
-    if (!user) router.push("/sign-in");
+    if (!user) {
+      router.push("/sign-in");
+      return false;
+    }
+    return true;
   };
 
-  const likeVideo = async () => {
-    checkAuth();
-    try {
-      const body = { userId: user.userId, mediaId: media._id, action: "like" };
-      const res = await axiosToken.post(
-        constants.apiURL + `/user/likeOrSave`,
-        body
-      );
-
-      if (res.status === 200) {
-        console.log(res);
-        toast.success(res.data.message);
-      }
-    } catch (error) {
-      if (error.status === 401) {
-        router.replace("/sign-in");
-        return;
-      }
-      console.log(error);
-      // toast.error(messages.error);
-    }
+  const handleLikeVideo = async () => {
+    if (!checkAuth()) return;
+    await likeVideoAPI(user.id, media.id);
   };
 
-  const saveVideo = async () => {
-    checkAuth();
-    try {
-      const body = { userId: user.userId, mediaId: media._id, action: "save" };
-      const res = await axiosToken.post(
-        constants.apiURL + `/user/likeOrSave`,
-        body
-      );
-
-      if (res.status === 200) {
-        toast.success(res.data.message);
-      }
-    } catch (error) {
-      if (error.status === 401) {
-        router.replace("/sign-in");
-        return;
-      }
-      console.log(error);
-    }
+  const handleSaveVideo = async () => {
+    if (!checkAuth()) return;
+    await saveToWatchLater(user.id, media.id);
   };
 
   const updateSubscription = async () => {
-    if (!user) {
-      checkAuth();
-      return;
+    if (!checkAuth()) return;
+    const result = await subscribe(user.id, media.profile.id);
+    if (result !== null) {
+      setIsSubscribed(result);
+      setSubscriberCount(prev => result ? prev + 1 : prev - 1);
     }
-    setIsSubscribed((prev) => !prev);
-    mutate({ userId: media?.userId._id, subscriberId: user?.userId });
   };
 
   useEffect(() => {
-    if (user?.userId && media?._id) {
-      saveHistory(user.userId, media._id);
+    if (user?.id && media?.id) {
+      saveHistory(user.id, media.id);
     }
-  }, [user?.userId, media?._id]);
+  }, [user?.id, media?.id]);
 
   return (
     <div className="my-4">
@@ -94,7 +77,7 @@ const VideoDescription = ({ media }) => {
       <div className="mt-3 text-sm space-y-4 lg:space-y-0 lg:flex lg:items-center">
         <div className="flex gap-2">
           <Image
-            src={media.userId?.avatarURL ?? "/default-user.jpg"}
+            src={media.profile?.avatar_url ?? "/default-user.jpg"}
             alt="default user image"
             width={35}
             height={35}
@@ -102,11 +85,11 @@ const VideoDescription = ({ media }) => {
           />
           <div>
             <h2 className="tracking-tight text-base font-semibold">
-              {media.userId?.username}
+              {media.profile?.username}
             </h2>
-            <p className="text-neutral-400 text-xs">Subscriber count</p>
+            <p className="text-neutral-400 text-xs">{subscriberCount} subscribers</p>
           </div>
-          {media?.userId._id !== user?.userId && (
+          {media?.profile?.id !== user?.id && (
             <Button
               onClick={updateSubscription}
               variant={isSubscribed ? "secondary" : "tertiary"}
@@ -120,7 +103,7 @@ const VideoDescription = ({ media }) => {
         </div>
         <div className="flex lg:ml-auto">
           <Button
-            onClick={likeVideo}
+            onClick={handleLikeVideo}
             variant="tertiary"
             className="items-center gap-1 rounded-full text-xs font-medium self-center py-1.5 leading-6"
           >
@@ -130,7 +113,7 @@ const VideoDescription = ({ media }) => {
             </div>
           </Button>
           <Button
-            onClick={saveVideo}
+            onClick={handleSaveVideo}
             variant="tertiary"
             className="items-center gap-1 rounded-full text-xs font-medium ml-2 self-center py-1.5 leading-6"
           >

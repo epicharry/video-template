@@ -6,7 +6,7 @@ import React from "react";
 import { projectName } from "@/constants";
 
 const Navbar = () => {
-  const { user } = useUser();
+  const { user, profile } = useUser();
 
   return (
     <div className="h-16 flex items-center justify-between">
@@ -17,10 +17,10 @@ const Navbar = () => {
         </h1>
       </Link>
 
-      <Link href="/account">
-        {user && user?.avatarURL ? (
+      <Link href={user ? "/account" : "/sign-in"}>
+        {user && profile?.avatar_url ? (
           <Image
-            src={user?.avatarURL}
+            src={profile.avatar_url}
             alt="user-image"
             width={30}
             height={30}

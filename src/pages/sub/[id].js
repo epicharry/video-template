@@ -1,61 +1,61 @@
-import { useSubDetails } from "@/axios/api";
 import SubAccountDescription from "@/components/account/SubAccountDescription";
 import SubActions from "@/components/account/SubActions";
-import { getCookie } from "cookies-next/server";
+import { supabase } from "@/lib/supabase";
+import { getUserVideos } from "@/lib/api";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Loading from "@/components/Loading";
 
 const Subscription = () => {
-  const { query, isReady } = useRouter();
-  const [accID, setAccID] = useState(null);
-  const { data, isFetching } = useSubDetails({ userId: accID });
+  const { query } = useRouter();
+  const channelId = query.id;
 
-  useEffect(() => {
-    if (isReady && query.id) {
-      setAccID(query.id);
-    }
-  }, [isReady, query.id]);
+  const { data: profileData, isLoading: profileLoading } = useQuery({
+    queryKey: ['channel-profile', channelId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', channelId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!channelId,
+  });
+
+  const { data: videosData } = useQuery({
+    queryKey: ['channel-videos', channelId],
+    queryFn: () => getUserVideos(channelId),
+    enabled: !!channelId,
+  });
+
+  if (profileLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loading />
+      </div>
+    );
+  }
+
+  if (!profileData) {
+    return <div className="text-center py-20">Channel not found</div>;
+  }
 
   return (
     <div className="lg:pl-12 space-y-4">
-      {!isFetching && (
-        <>
-          <SubAccountDescription
-            user={{
-              username: data?.data.user.username,
-              email: data?.data.user.email,
-              userId: data?.data.user._id,
-            }}
-            preview={data?.data.user.avatarURL}
-          />
-          {data?.data.videos && <SubActions videos={data?.data.videos} />}
-        </>
-      )}
+      <SubAccountDescription
+        channelUser={{
+          id: profileData.id,
+          username: profileData.username,
+          email: '',
+        }}
+        preview={profileData.avatar_url || "/default-user.jpg"}
+      />
+      {videosData && <SubActions videos={videosData} />}
     </div>
   );
 };
 
 export default Subscription;
-
-export async function getServerSideProps({ req, res }) {
-  try {
-    const token = await getCookie("token", { req, res });
-    if (!token) {
-      return {
-        redirect: {
-          destination: "/sign-in",
-          permanent: false,
-        },
-      };
-    }
-
-    return {
-      props: {},
-    };
-  } catch (error) {
-    console.error("GSSP Error ([id]]):", error);
-    return {
-      props: {},
-    };
-  }
-}
