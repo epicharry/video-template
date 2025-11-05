@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 import { getRule34VideoSources } from "@/lib/rule34video";
 import { getXAnimuVideo } from "@/lib/xanimu";
+import { getYoujizzVideoSources } from "@/lib/youjizz";
 import Loading from "@/components/Loading";
 import Layout from "@/components/layouts";
 import CustomVideoPlayer from "@/components/CustomVideoPlayer";
@@ -14,6 +15,7 @@ const Watch = () => {
   const [videoKey, setVideoKey] = useState(0);
 
   const isXAnimu = sourceType === "xanimu";
+  const isYoujizz = sourceType === "youjizz";
   const isRule34 = sourceType === "rule34" || (!sourceType && url);
 
   const { data: rule34Data, isLoading: rule34Loading, error: rule34Error } = useQuery({
@@ -28,9 +30,15 @@ const Watch = () => {
     enabled: isXAnimu && !!id,
   });
 
-  const sources = isXAnimu ? null : rule34Data;
-  const isLoading = isRule34 ? rule34Loading : xanimuLoading;
-  const error = isRule34 ? rule34Error : xanimuError;
+  const { data: youjizzData, isLoading: youjizzLoading, error: youjizzError } = useQuery({
+    queryKey: ["youjizz-video-sources", id],
+    queryFn: () => getYoujizzVideoSources(id),
+    enabled: isYoujizz && !!id,
+  });
+
+  const sources = isXAnimu ? null : isYoujizz ? youjizzData : rule34Data;
+  const isLoading = isRule34 ? rule34Loading : isYoujizz ? youjizzLoading : xanimuLoading;
+  const error = isRule34 ? rule34Error : isYoujizz ? youjizzError : xanimuError;
 
   const currentSource = isXAnimu
     ? null
@@ -38,7 +46,7 @@ const Watch = () => {
     ? sources?.find((s) => s.quality === selectedQuality)
     : sources?.[0];
 
-  const videoUrl = isXAnimu ? xanimuData?.videoUrl : currentSource?.resolved_url;
+  const videoUrl = isXAnimu ? xanimuData?.videoUrl : isYoujizz ? currentSource?.url : currentSource?.resolved_url;
   const videoTitle = isXAnimu ? xanimuData?.title : null;
 
   useEffect(() => {
@@ -63,7 +71,7 @@ const Watch = () => {
     );
   }
 
-  if (error || (isRule34 && (!sources || sources.length === 0)) || (isXAnimu && !xanimuData)) {
+  if (error || (isRule34 && (!sources || sources.length === 0)) || (isYoujizz && (!sources || sources.length === 0)) || (isXAnimu && !xanimuData)) {
     return (
       <div className="text-center py-20 text-red-400">
         Failed to load video. Please try again.
@@ -88,7 +96,7 @@ const Watch = () => {
             </div>
           )}
 
-          {isRule34 && sources && sources.length > 0 && (
+          {(isRule34 || isYoujizz) && sources && sources.length > 0 && (
             <div className="mt-4 bg-neutral-900 rounded-lg p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Quality Settings</h2>
@@ -117,10 +125,10 @@ const Watch = () => {
           <div className="mt-4 bg-neutral-900 rounded-lg p-4">
             <h3 className="font-semibold mb-2">About this video</h3>
             <div className="text-sm text-neutral-400 space-y-1">
-              <p>Source: {isXAnimu ? "XAnimu" : "Rule34Video"}</p>
-              {isRule34 && currentSource && (
+              <p>Source: {isXAnimu ? "XAnimu" : isYoujizz ? "Youjizz" : "Rule34Video"}</p>
+              {(isRule34 || isYoujizz) && currentSource && (
                 <>
-                  <p>Format: {currentSource.ext?.toUpperCase()}</p>
+                  {isRule34 && <p>Format: {currentSource.ext?.toUpperCase()}</p>}
                   <p>Available qualities: {sources.map(s => s.quality).join(", ")}</p>
                 </>
               )}

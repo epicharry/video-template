@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 import { searchRule34Videos } from "@/lib/rule34video";
 import { searchXAnimuVideos } from "@/lib/xanimu";
+import { searchYoujizzVideos } from "@/lib/youjizz";
 import Loading from "@/components/Loading";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,6 +21,8 @@ const Search = () => {
     queryFn: () => {
       if (source === "xanimu") {
         return searchXAnimuVideos(q, currentPage);
+      } else if (source === "youjizz") {
+        return searchYoujizzVideos(q, currentPage);
       }
       return searchRule34Videos(q, currentPage);
     },
@@ -74,6 +77,16 @@ const Search = () => {
             }`}
           >
             XAnimu
+          </button>
+          <button
+            onClick={() => setSource("youjizz")}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              source === "youjizz"
+                ? "bg-red-600"
+                : "bg-neutral-800 hover:bg-neutral-700"
+            }`}
+          >
+            Youjizz
           </button>
         </div>
         <form onSubmit={handleSearch} className="flex gap-2">
@@ -139,16 +152,23 @@ const Search = () => {
           ) : (
             <>
               <div className="mb-4 text-neutral-400">
-                Showing results for &quot;{q}&quot; - Page {currentPage} ({source === "xanimu" ? "XAnimu" : "Rule34Video"})
+                Showing results for &quot;{q}&quot; - Page {currentPage} ({
+                  source === "xanimu" ? "XAnimu" :
+                  source === "youjizz" ? "Youjizz" :
+                  "Rule34Video"
+                })
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
                 {videos && videos.map((video, index) => (
                   <Link
                     key={video.id || index}
-                    href={source === "xanimu"
-                      ? `/watch?id=${encodeURIComponent(video.id)}&source=xanimu`
-                      : `/watch?url=${encodeURIComponent(video.url)}&source=rule34`
+                    href={
+                      source === "xanimu"
+                        ? `/watch?id=${encodeURIComponent(video.id)}&source=xanimu`
+                        : source === "youjizz"
+                        ? `/watch?id=${encodeURIComponent(video.id)}&source=youjizz`
+                        : `/watch?url=${encodeURIComponent(video.url)}&source=rule34`
                     }
                     className="group"
                   >
@@ -160,7 +180,7 @@ const Search = () => {
                         unoptimized
                         className="object-cover group-hover:scale-105 transition-transform duration-200"
                       />
-                      {source === "rule34" && video.duration && (
+                      {(source === "rule34" || source === "youjizz") && video.duration && (
                         <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs">
                           {video.duration}
                         </div>
@@ -169,12 +189,16 @@ const Search = () => {
                     <h3 className="font-medium text-sm line-clamp-2 mb-1">
                       {video.title}
                     </h3>
-                    {source === "rule34" && (
+                    {(source === "rule34" || source === "youjizz") && (
                       <>
                         <div className="flex items-center gap-2 text-xs text-neutral-400">
                           <span>{video.views} views</span>
-                          <span>•</span>
-                          <span>{video.added}</span>
+                          {source === "rule34" && video.added && (
+                            <>
+                              <span>•</span>
+                              <span>{video.added}</span>
+                            </>
+                          )}
                         </div>
                         {video.rating && (
                           <div className="text-xs text-neutral-400 mt-1">
