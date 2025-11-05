@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
 import toast from 'react-hot-toast';
+import { searchYoujizzVideos, getYoujizzVideoSources, getHighestQualitySource as getYoujizzHighestQuality } from './youjizz';
+import { searchXAnimuVideos, getXAnimuVideo } from './xanimu';
+import { searchRule34Videos, getRule34VideoSources, getHighestQualitySource as getRule34HighestQuality } from './rule34video';
 
 export const getAllVideos = async () => {
   try {
@@ -309,5 +312,60 @@ export const getSubscriberCount = async (channelId) => {
   } catch (error) {
     console.error('Error fetching subscriber count:', error);
     return 0;
+  }
+};
+
+export const searchExternalVideos = async (query, page = 1, source = 'youjizz') => {
+  try {
+    switch (source.toLowerCase()) {
+      case 'youjizz':
+        return await searchYoujizzVideos(query, page);
+      case 'xanimu':
+        return await searchXAnimuVideos(query, page);
+      case 'rule34':
+        return await searchRule34Videos(query, page);
+      default:
+        throw new Error(`Unknown source: ${source}`);
+    }
+  } catch (error) {
+    console.error(`Error searching ${source} videos:`, error);
+    throw error;
+  }
+};
+
+export const getExternalVideoSources = async (videoId, source = 'youjizz') => {
+  try {
+    switch (source.toLowerCase()) {
+      case 'youjizz':
+        return await getYoujizzVideoSources(videoId);
+      case 'xanimu':
+        return await getXAnimuVideo(videoId);
+      case 'rule34':
+        return await getRule34VideoSources(videoId);
+      default:
+        throw new Error(`Unknown source: ${source}`);
+    }
+  } catch (error) {
+    console.error(`Error getting ${source} video sources:`, error);
+    throw error;
+  }
+};
+
+export const getExternalHighestQuality = async (videoId, source = 'youjizz') => {
+  try {
+    switch (source.toLowerCase()) {
+      case 'youjizz':
+        return await getYoujizzHighestQuality(videoId);
+      case 'xanimu':
+        const video = await getXAnimuVideo(videoId);
+        return video.videoUrl;
+      case 'rule34':
+        return await getRule34HighestQuality(videoId);
+      default:
+        throw new Error(`Unknown source: ${source}`);
+    }
+  } catch (error) {
+    console.error(`Error getting ${source} highest quality:`, error);
+    throw error;
   }
 };
