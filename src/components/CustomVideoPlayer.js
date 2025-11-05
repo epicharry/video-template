@@ -376,10 +376,11 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
           <div className="timeline">
             <div className="thumb-indicator"></div>
           </div>
-          {showPreview && previewTime !== null && (
+          {showPreview && (
             <video
               ref={previewVideoRef}
               className="preview-video"
+              src={src}
               muted
               playsInline
             />
