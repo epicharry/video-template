@@ -226,18 +226,18 @@ video {
 
 .preview-video {
   position: absolute;
-  height: 80px;
+  width: 200px;
   aspect-ratio: 16 / 9;
   bottom: 100%;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   transform: translateX(-50%);
   left: calc(var(--preview-position) * 100%);
-  border-radius: .25rem;
-  border: 2px solid white;
+  border-radius: 0.5rem;
   background: black;
-  object-fit: cover;
+  object-fit: contain;
   pointer-events: none;
   z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .thumbnail-img {
