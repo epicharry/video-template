@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 import { getRule34VideoSources } from "@/lib/rule34video";
 import Loading from "@/components/Loading";
 import Layout from "@/components/layouts";
-import ReactPlayer from "react-player";
+import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
 const Watch = () => {
   const router = useRouter();
   const { url } = router.query;
   const [selectedQuality, setSelectedQuality] = useState(null);
+  const [videoKey, setVideoKey] = useState(0);
 
   const { data: sources, isLoading, error } = useQuery({
     queryKey: ["rule34-video-sources", url],
@@ -20,6 +21,13 @@ const Watch = () => {
   const currentSource = selectedQuality
     ? sources?.find((s) => s.quality === selectedQuality)
     : sources?.[0];
+
+  useEffect(() => {
+    if (currentSource) {
+      setVideoKey(prev => prev + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSource?.resolved_url]);
 
   if (!url) {
     return (
@@ -49,22 +57,10 @@ const Watch = () => {
     <div className="max-w-7xl mx-auto px-4">
       <div className="grid lg:grid-cols-12 gap-4">
         <div className="lg:col-span-8">
-          <div className="bg-black rounded-lg overflow-hidden aspect-video">
-            <ReactPlayer
-              url={currentSource?.resolved_url}
-              controls
-              width="100%"
-              height="100%"
-              playing
-              config={{
-                file: {
-                  attributes: {
-                    controlsList: "nodownload",
-                  },
-                },
-              }}
-            />
-          </div>
+          <CustomVideoPlayer
+            key={videoKey}
+            src={currentSource?.resolved_url}
+          />
 
           <div className="mt-4 bg-neutral-900 rounded-lg p-4">
             <div className="flex items-center justify-between mb-4">
