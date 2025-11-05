@@ -371,7 +371,6 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
           className="preview-video"
           muted
           playsInline
-          crossOrigin="anonymous"
         />
       )}
       <div className="video-controls-container">
@@ -478,7 +477,7 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
           </button>
         </div>
       </div>
-      <video ref={videoRef} src={src} onClick={togglePlay} crossOrigin="anonymous" />
+      <video ref={videoRef} src={src} onClick={togglePlay} />
     </div>
   );
 };
