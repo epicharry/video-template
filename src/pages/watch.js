@@ -54,13 +54,15 @@ const Watch = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
+    <div className="max-w-7xl mx-auto px-4 py-4">
       <div className="grid lg:grid-cols-12 gap-4">
         <div className="lg:col-span-8">
-          <CustomVideoPlayer
-            key={videoKey}
-            src={currentSource?.resolved_url}
-          />
+          <div className="rounded-lg overflow-hidden">
+            <CustomVideoPlayer
+              key={videoKey}
+              src={currentSource?.resolved_url}
+            />
+          </div>
 
           <div className="mt-4 bg-neutral-900 rounded-lg p-4">
             <div className="flex items-center justify-between mb-4">

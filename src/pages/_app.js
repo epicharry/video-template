@@ -1,6 +1,7 @@
 import Layout from "@/components/layouts";
 import { UserProvider } from "@/contexts/UserContext";
 import "@/styles/globals.css";
+import "@/styles/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NextNProgress from "nextjs-progressbar";
 import { Toaster } from "react-hot-toast";
