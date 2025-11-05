@@ -117,6 +117,7 @@ const Search = () => {
                         src={video.thumbnail}
                         alt={video.title}
                         fill
+                        unoptimized
                         className="object-cover group-hover:scale-105 transition-transform duration-200"
                       />
                       <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs">
