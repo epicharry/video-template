@@ -2,37 +2,55 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 import { getRule34VideoSources } from "@/lib/rule34video";
+import { getXAnimuVideo } from "@/lib/xanimu";
 import Loading from "@/components/Loading";
 import Layout from "@/components/layouts";
 import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
 const Watch = () => {
   const router = useRouter();
-  const { url } = router.query;
+  const { url, id, source: sourceType } = router.query;
   const [selectedQuality, setSelectedQuality] = useState(null);
   const [videoKey, setVideoKey] = useState(0);
 
-  const { data: sources, isLoading, error } = useQuery({
+  const isXAnimu = sourceType === "xanimu";
+  const isRule34 = sourceType === "rule34" || (!sourceType && url);
+
+  const { data: rule34Data, isLoading: rule34Loading, error: rule34Error } = useQuery({
     queryKey: ["rule34-video-sources", url],
     queryFn: () => getRule34VideoSources(url),
-    enabled: !!url,
+    enabled: isRule34 && !!url,
   });
 
-  const currentSource = selectedQuality
+  const { data: xanimuData, isLoading: xanimuLoading, error: xanimuError } = useQuery({
+    queryKey: ["xanimu-video", id],
+    queryFn: () => getXAnimuVideo(id),
+    enabled: isXAnimu && !!id,
+  });
+
+  const sources = isXAnimu ? null : rule34Data;
+  const isLoading = isRule34 ? rule34Loading : xanimuLoading;
+  const error = isRule34 ? rule34Error : xanimuError;
+
+  const currentSource = isXAnimu
+    ? null
+    : selectedQuality
     ? sources?.find((s) => s.quality === selectedQuality)
     : sources?.[0];
 
+  const videoUrl = isXAnimu ? xanimuData?.videoUrl : currentSource?.resolved_url;
+  const videoTitle = isXAnimu ? xanimuData?.title : null;
+
   useEffect(() => {
-    if (currentSource) {
+    if (videoUrl) {
       setVideoKey(prev => prev + 1);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSource?.resolved_url]);
+  }, [videoUrl]);
 
-  if (!url) {
+  if (!url && !id) {
     return (
       <div className="text-center py-20 text-neutral-400">
-        No video URL provided
+        No video provided
       </div>
     );
   }
@@ -45,7 +63,7 @@ const Watch = () => {
     );
   }
 
-  if (error || !sources || sources.length === 0) {
+  if (error || (isRule34 && (!sources || sources.length === 0)) || (isXAnimu && !xanimuData)) {
     return (
       <div className="text-center py-20 text-red-400">
         Failed to load video. Please try again.
@@ -60,40 +78,52 @@ const Watch = () => {
           <div className="rounded-lg overflow-hidden">
             <CustomVideoPlayer
               key={videoKey}
-              src={currentSource?.resolved_url}
+              src={videoUrl}
             />
           </div>
 
-          <div className="mt-4 bg-neutral-900 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Quality Settings</h2>
-              <span className="text-sm text-neutral-400">
-                Current: {currentSource?.quality}
-              </span>
+          {videoTitle && (
+            <div className="mt-4 bg-neutral-900 rounded-lg p-4">
+              <h1 className="text-xl font-semibold">{videoTitle}</h1>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {sources.map((source) => (
-                <button
-                  key={source.quality}
-                  onClick={() => setSelectedQuality(source.quality)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    (selectedQuality === source.quality || (!selectedQuality && source === sources[0]))
-                      ? "bg-red-600"
-                      : "bg-neutral-800 hover:bg-neutral-700"
-                  }`}
-                >
-                  {source.quality}
-                </button>
-              ))}
+          )}
+
+          {isRule34 && sources && sources.length > 0 && (
+            <div className="mt-4 bg-neutral-900 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Quality Settings</h2>
+                <span className="text-sm text-neutral-400">
+                  Current: {currentSource?.quality}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {sources.map((source) => (
+                  <button
+                    key={source.quality}
+                    onClick={() => setSelectedQuality(source.quality)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      (selectedQuality === source.quality || (!selectedQuality && source === sources[0]))
+                        ? "bg-red-600"
+                        : "bg-neutral-800 hover:bg-neutral-700"
+                    }`}
+                  >
+                    {source.quality}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="mt-4 bg-neutral-900 rounded-lg p-4">
             <h3 className="font-semibold mb-2">About this video</h3>
             <div className="text-sm text-neutral-400 space-y-1">
-              <p>Source: Rule34Video</p>
-              <p>Format: {currentSource?.ext?.toUpperCase()}</p>
-              <p>Available qualities: {sources.map(s => s.quality).join(", ")}</p>
+              <p>Source: {isXAnimu ? "XAnimu" : "Rule34Video"}</p>
+              {isRule34 && currentSource && (
+                <>
+                  <p>Format: {currentSource.ext?.toUpperCase()}</p>
+                  <p>Available qualities: {sources.map(s => s.quality).join(", ")}</p>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
 import { searchRule34Videos } from "@/lib/rule34video";
+import { searchXAnimuVideos } from "@/lib/xanimu";
 import Loading from "@/components/Loading";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,13 +10,19 @@ import { ChevronRight, Search as SearchIcon } from "lucide-react";
 
 const Search = () => {
   const router = useRouter();
-  const { q, page: pageParam } = router.query;
+  const { q, page: pageParam, source: sourceParam } = router.query;
   const [searchQuery, setSearchQuery] = useState(q || "");
+  const [source, setSource] = useState(sourceParam || "rule34");
   const currentPage = parseInt(pageParam || "1");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["rule34-search", q, currentPage],
-    queryFn: () => searchRule34Videos(q, currentPage),
+    queryKey: ["video-search", source, q, currentPage],
+    queryFn: () => {
+      if (source === "xanimu") {
+        return searchXAnimuVideos(q, currentPage);
+      }
+      return searchRule34Videos(q, currentPage);
+    },
     enabled: !!q,
     retry: 2,
     retryDelay: 1000,
@@ -24,21 +31,51 @@ const Search = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}&page=1`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}&page=1&source=${source}`);
     }
   };
 
   const handleNextPage = () => {
-    if (data?.videos && data.videos.length > 0) {
-      router.push(`/search?q=${encodeURIComponent(q)}&page=${currentPage + 1}`);
+    const hasResults = source === "xanimu"
+      ? data?.results && data.results.length > 0
+      : data?.videos && data.videos.length > 0;
+
+    if (hasResults) {
+      router.push(`/search?q=${encodeURIComponent(q)}&page=${currentPage + 1}&source=${source}`);
     }
   };
 
-  const hasMorePages = data?.videos && data.videos.length > 0;
+  const hasMorePages = source === "xanimu"
+    ? data?.hasMore
+    : data?.videos && data.videos.length > 0;
+
+  const videos = source === "xanimu" ? data?.results : data?.videos;
 
   return (
     <div className="max-w-7xl mx-auto px-4">
-      <div className="mb-8">
+      <div className="mb-8 space-y-4">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSource("rule34")}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              source === "rule34"
+                ? "bg-red-600"
+                : "bg-neutral-800 hover:bg-neutral-700"
+            }`}
+          >
+            Rule34Video
+          </button>
+          <button
+            onClick={() => setSource("xanimu")}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              source === "xanimu"
+                ? "bg-red-600"
+                : "bg-neutral-800 hover:bg-neutral-700"
+            }`}
+          >
+            XAnimu
+          </button>
+        </div>
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -92,7 +129,7 @@ const Search = () => {
 
       {data && (
         <>
-          {data.videos.length === 0 ? (
+          {videos && videos.length === 0 ? (
             <div className="text-center py-20 text-neutral-400">
               <p>No videos found for &quot;{q}&quot;</p>
               {currentPage > 1 && (
@@ -102,14 +139,17 @@ const Search = () => {
           ) : (
             <>
               <div className="mb-4 text-neutral-400">
-                Showing results for &quot;{q}&quot; - Page {currentPage}
+                Showing results for &quot;{q}&quot; - Page {currentPage} ({source === "xanimu" ? "XAnimu" : "Rule34Video"})
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-                {data.videos.map((video, index) => (
+                {videos && videos.map((video, index) => (
                   <Link
-                    key={index}
-                    href={`/watch?url=${encodeURIComponent(video.url)}`}
+                    key={video.id || index}
+                    href={source === "xanimu"
+                      ? `/watch?id=${encodeURIComponent(video.id)}&source=xanimu`
+                      : `/watch?url=${encodeURIComponent(video.url)}&source=rule34`
+                    }
                     className="group"
                   >
                     <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-800 mb-2">
@@ -120,22 +160,28 @@ const Search = () => {
                         unoptimized
                         className="object-cover group-hover:scale-105 transition-transform duration-200"
                       />
-                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs">
-                        {video.duration}
-                      </div>
+                      {source === "rule34" && video.duration && (
+                        <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs">
+                          {video.duration}
+                        </div>
+                      )}
                     </div>
                     <h3 className="font-medium text-sm line-clamp-2 mb-1">
                       {video.title}
                     </h3>
-                    <div className="flex items-center gap-2 text-xs text-neutral-400">
-                      <span>{video.views} views</span>
-                      <span>•</span>
-                      <span>{video.added}</span>
-                    </div>
-                    {video.rating && (
-                      <div className="text-xs text-neutral-400 mt-1">
-                        {video.rating}
-                      </div>
+                    {source === "rule34" && (
+                      <>
+                        <div className="flex items-center gap-2 text-xs text-neutral-400">
+                          <span>{video.views} views</span>
+                          <span>•</span>
+                          <span>{video.added}</span>
+                        </div>
+                        {video.rating && (
+                          <div className="text-xs text-neutral-400 mt-1">
+                            {video.rating}
+                          </div>
+                        )}
+                      </>
                     )}
                   </Link>
                 ))}
