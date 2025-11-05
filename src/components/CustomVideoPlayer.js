@@ -17,6 +17,12 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [wasPaused, setWasPaused] = useState(false);
+  const [previewThumbnail, setPreviewThumbnail] = useState(null);
+  const [showControls, setShowControls] = useState(true);
+
+  const hideControlsTimeoutRef = useRef(null);
+  const canvasRef = useRef(null);
+  const previewVideoRef = useRef(null);
 
   const formatDuration = (time) => {
     const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
@@ -83,6 +89,60 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
     }
   };
 
+  const thumbnailCacheRef = useRef({});
+  const lastThumbnailTimeRef = useRef(0);
+  const thumbnailGeneratingRef = useRef(false);
+
+  const generateThumbnail = (time) => {
+    if (!previewVideoRef.current || !canvasRef.current || !time) return;
+    if (thumbnailGeneratingRef.current) return;
+
+    const previewVideo = previewVideoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    const cacheKey = Math.floor(time);
+    if (thumbnailCacheRef.current[cacheKey]) {
+      setPreviewThumbnail(thumbnailCacheRef.current[cacheKey]);
+      return;
+    }
+
+    if (Math.abs(time - lastThumbnailTimeRef.current) < 0.5) {
+      return;
+    }
+
+    lastThumbnailTimeRef.current = time;
+    thumbnailGeneratingRef.current = true;
+
+    previewVideo.currentTime = time;
+
+    const seekHandler = () => {
+      try {
+        canvas.width = 160;
+        canvas.height = 90;
+        ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
+        const thumbnail = canvas.toDataURL();
+
+        thumbnailCacheRef.current[cacheKey] = thumbnail;
+        setPreviewThumbnail(thumbnail);
+      } catch (error) {
+        console.error("Error generating thumbnail:", error);
+      } finally {
+        thumbnailGeneratingRef.current = false;
+        previewVideo.removeEventListener("seeked", seekHandler);
+      }
+    };
+
+    previewVideo.addEventListener("seeked", seekHandler);
+  };
+
+  useEffect(() => {
+    if (previewVideoRef.current && src) {
+      previewVideoRef.current.src = src;
+      previewVideoRef.current.load();
+    }
+  }, [src]);
+
   const handleTimelineUpdate = (e) => {
     if (!timelineContainerRef.current || !videoRef.current) return;
 
@@ -90,6 +150,11 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
     const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width;
 
     timelineContainerRef.current.style.setProperty("--preview-position", percent);
+
+    const previewTime = percent * videoRef.current.duration;
+    if (!isScrubbing && previewTime > 0) {
+      generateThumbnail(previewTime);
+    }
 
     if (isScrubbing) {
       e.preventDefault();
@@ -256,6 +321,52 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isScrubbing, wasPaused]);
 
+  useEffect(() => {
+    if (!isFullScreen) {
+      setShowControls(true);
+      if (hideControlsTimeoutRef.current) {
+        clearTimeout(hideControlsTimeoutRef.current);
+      }
+      return;
+    }
+
+    const handleMouseMove = () => {
+      setShowControls(true);
+
+      if (hideControlsTimeoutRef.current) {
+        clearTimeout(hideControlsTimeoutRef.current);
+      }
+
+      hideControlsTimeoutRef.current = setTimeout(() => {
+        if (!isPaused && isFullScreen) {
+          setShowControls(false);
+        }
+      }, 2000);
+    };
+
+    const handleMouseLeave = () => {
+      if (!isPaused && isFullScreen) {
+        setShowControls(false);
+      }
+    };
+
+    const container = videoContainerRef.current;
+    if (container) {
+      container.addEventListener("mousemove", handleMouseMove);
+      container.addEventListener("mouseleave", handleMouseLeave);
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener("mousemove", handleMouseMove);
+        container.removeEventListener("mouseleave", handleMouseLeave);
+      }
+      if (hideControlsTimeoutRef.current) {
+        clearTimeout(hideControlsTimeoutRef.current);
+      }
+    };
+  }, [isFullScreen, isPaused]);
+
   const containerClasses = [
     "video-container",
     isPaused && "paused",
@@ -263,6 +374,7 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
     isFullScreen && "full-screen",
     isScrubbing && "scrubbing",
     isCaptions && "captions",
+    !showControls && isFullScreen && "hide-controls",
   ]
     .filter(Boolean)
     .join(" ");
@@ -275,6 +387,13 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img ref={thumbnailImgRef} className="thumbnail-img" alt="" />
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <video
+        ref={previewVideoRef}
+        style={{ display: "none" }}
+        muted
+        playsInline
+      />
       <div className="video-controls-container">
         <div
           ref={timelineContainerRef}
@@ -284,6 +403,12 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
         >
           <div className="timeline">
             <div className="thumb-indicator"></div>
+            {previewThumbnail && (
+              <div className="preview-img-container">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewThumbnail} alt="Preview" className="preview-img" />
+              </div>
+            )}
           </div>
         </div>
         <div className="controls">
