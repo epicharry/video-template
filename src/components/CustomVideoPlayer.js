@@ -17,11 +17,11 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [wasPaused, setWasPaused] = useState(false);
-  const [previewThumbnail, setPreviewThumbnail] = useState(null);
+  const [previewTime, setPreviewTime] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
   const hideControlsTimeoutRef = useRef(null);
-  const canvasRef = useRef(null);
   const previewVideoRef = useRef(null);
 
   const formatDuration = (time) => {
@@ -89,51 +89,28 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
     }
   };
 
-  const thumbnailCacheRef = useRef({});
-  const lastThumbnailTimeRef = useRef(0);
-  const thumbnailGeneratingRef = useRef(false);
+  const lastPreviewTimeRef = useRef(0);
+  const previewTimeoutRef = useRef(null);
 
-  const generateThumbnail = (time) => {
-    if (!previewVideoRef.current || !canvasRef.current || !time) return;
-    if (thumbnailGeneratingRef.current) return;
+  const updatePreview = (time) => {
+    if (!previewVideoRef.current || !time) return;
 
-    const previewVideo = previewVideoRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-
-    const cacheKey = Math.floor(time);
-    if (thumbnailCacheRef.current[cacheKey]) {
-      setPreviewThumbnail(thumbnailCacheRef.current[cacheKey]);
+    if (Math.abs(time - lastPreviewTimeRef.current) < 0.5) {
       return;
     }
 
-    if (Math.abs(time - lastThumbnailTimeRef.current) < 0.5) {
-      return;
+    lastPreviewTimeRef.current = time;
+
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
     }
 
-    lastThumbnailTimeRef.current = time;
-    thumbnailGeneratingRef.current = true;
-
-    previewVideo.currentTime = time;
-
-    const seekHandler = () => {
-      try {
-        canvas.width = 160;
-        canvas.height = 90;
-        ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
-        const thumbnail = canvas.toDataURL();
-
-        thumbnailCacheRef.current[cacheKey] = thumbnail;
-        setPreviewThumbnail(thumbnail);
-      } catch (error) {
-        console.error("Error generating thumbnail:", error);
-      } finally {
-        thumbnailGeneratingRef.current = false;
-        previewVideo.removeEventListener("seeked", seekHandler);
+    previewTimeoutRef.current = setTimeout(() => {
+      if (previewVideoRef.current) {
+        previewVideoRef.current.currentTime = time;
+        setPreviewTime(time);
       }
-    };
-
-    previewVideo.addEventListener("seeked", seekHandler);
+    }, 50);
   };
 
   useEffect(() => {
@@ -151,9 +128,10 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
 
     timelineContainerRef.current.style.setProperty("--preview-position", percent);
 
-    const previewTime = percent * videoRef.current.duration;
-    if (!isScrubbing && previewTime > 0) {
-      generateThumbnail(previewTime);
+    const time = percent * videoRef.current.duration;
+    if (!isScrubbing && time > 0) {
+      setShowPreview(true);
+      updatePreview(time);
     }
 
     if (isScrubbing) {
@@ -387,28 +365,25 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img ref={thumbnailImgRef} className="thumbnail-img" alt="" />
-      <canvas ref={canvasRef} style={{ display: "none" }} />
-      <video
-        ref={previewVideoRef}
-        style={{ display: "none" }}
-        muted
-        playsInline
-      />
+      {showPreview && previewTime !== null && (
+        <video
+          ref={previewVideoRef}
+          className="preview-video"
+          muted
+          playsInline
+          crossOrigin="anonymous"
+        />
+      )}
       <div className="video-controls-container">
         <div
           ref={timelineContainerRef}
           className="timeline-container"
           onMouseMove={handleTimelineUpdate}
           onMouseDown={toggleScrubbing}
+          onMouseLeave={() => setShowPreview(false)}
         >
           <div className="timeline">
             <div className="thumb-indicator"></div>
-            {previewThumbnail && (
-              <div className="preview-img-container">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewThumbnail} alt="Preview" className="preview-img" />
-              </div>
-            )}
           </div>
         </div>
         <div className="controls">
@@ -503,7 +478,7 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
           </button>
         </div>
       </div>
-      <video ref={videoRef} src={src} onClick={togglePlay} />
+      <video ref={videoRef} src={src} onClick={togglePlay} crossOrigin="anonymous" />
     </div>
   );
 };

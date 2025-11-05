@@ -220,7 +220,7 @@ video {
   aspect-ratio: 1 / 1;
 }
 
-.preview-img-container {
+.preview-video {
   position: absolute;
   height: 80px;
   aspect-ratio: 16 / 9;
@@ -229,15 +229,10 @@ video {
   left: calc(var(--preview-position) * 100%);
   border-radius: .25rem;
   border: 2px solid white;
-  display: none;
   background: black;
-  overflow: hidden;
-}
-
-.timeline .preview-img {
-  width: 100%;
-  height: 100%;
   object-fit: cover;
+  pointer-events: none;
+  z-index: 100;
 }
 
 .thumbnail-img {
@@ -255,10 +250,6 @@ video {
   display: block;
 }
 
-.video-container.scrubbing .preview-img-container,
-.timeline-container:hover .preview-img-container {
-  display: block;
-}
 
 .video-container.scrubbing .timeline::before,
 .timeline-container:hover .timeline::before {
