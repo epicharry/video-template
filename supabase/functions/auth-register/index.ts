@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.79.0';
-import * as bcrypt from 'npm:bcryptjs@2.4.3';
+import bcrypt from 'npm:bcryptjs@2.4.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,7 +69,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
 
     const { data: newUser, error: insertError } = await supabase
       .from('users')
