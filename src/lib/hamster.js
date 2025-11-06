@@ -1,4 +1,4 @@
-const HAMSTER_API_BASE = 'https://harryvibes.free.nf/hamster.php';
+const HAMSTER_API_BASE = 'https://harrypersonal.haryvibes.workers.dev/hamster';
 
 export const searchHamsterVideos = async (query, page = 1) => {
   try {
