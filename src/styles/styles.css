@@ -271,3 +271,53 @@ video {
 .timeline-container:hover .timeline {
   height: 100%;
 }
+
+.quality-container {
+  position: relative;
+}
+
+.quality-btn {
+  min-width: 70px;
+  text-align: center;
+}
+
+.quality-menu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 0.5rem;
+  background: rgba(0, 0, 0, 0.95);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  min-width: 120px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.quality-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  background: transparent;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 150ms ease-in-out;
+}
+
+.quality-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.quality-option.active {
+  background: rgba(220, 38, 38, 0.8);
+  font-weight: 600;
+}
+
+.quality-option.active:hover {
+  background: rgba(220, 38, 38, 0.9);
+}

@@ -57,12 +57,6 @@ const Watch = () => {
   const videoUrl = isXAnimu ? xanimuData?.videoUrl : isYoujizz ? currentSource?.url : isHamster ? currentSource?.url : currentSource?.resolved_url;
   const videoTitle = isXAnimu ? xanimuData?.title : null;
 
-  useEffect(() => {
-    if (videoUrl) {
-      setVideoKey(prev => prev + 1);
-    }
-  }, [videoUrl]);
-
   if (!url && !id && !link) {
     return (
       <div className="text-center py-20 text-neutral-400">
@@ -93,8 +87,10 @@ const Watch = () => {
         <div className="lg:col-span-8">
           <div className="rounded-lg overflow-hidden">
             <CustomVideoPlayer
-              key={videoKey}
               src={videoUrl}
+              sources={sources}
+              selectedQuality={selectedQuality}
+              onQualityChange={setSelectedQuality}
             />
           </div>
 

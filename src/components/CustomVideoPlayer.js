@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const CustomVideoPlayer = ({ src, thumbnail }) => {
+const CustomVideoPlayer = ({ src, thumbnail, sources, selectedQuality, onQualityChange }) => {
   const videoRef = useRef(null);
   const videoContainerRef = useRef(null);
   const timelineContainerRef = useRef(null);
@@ -20,6 +20,7 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
   const [previewTime, setPreviewTime] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
 
   const hideControlsTimeoutRef = useRef(null);
   const previewVideoRef = useRef(null);
@@ -440,6 +441,40 @@ const CustomVideoPlayer = ({ src, thumbnail }) => {
           <button className="speed-btn wide-btn" onClick={changePlaybackSpeed}>
             {playbackSpeed}x
           </button>
+          {sources && sources.length > 0 && (
+            <div className="quality-container">
+              <button
+                className="quality-btn wide-btn"
+                onClick={() => setShowQualityMenu(!showQualityMenu)}
+              >
+                {selectedQuality || sources[0]?.quality || "Quality"}
+              </button>
+              {showQualityMenu && (
+                <div className="quality-menu">
+                  {sources.map((source) => (
+                    <button
+                      key={source.quality}
+                      className={`quality-option ${(selectedQuality === source.quality || (!selectedQuality && source === sources[0])) ? 'active' : ''}`}
+                      onClick={() => {
+                        const currentTime = videoRef.current?.currentTime;
+                        const wasPlaying = !videoRef.current?.paused;
+                        onQualityChange?.(source.quality);
+                        setShowQualityMenu(false);
+                        setTimeout(() => {
+                          if (videoRef.current && currentTime) {
+                            videoRef.current.currentTime = currentTime;
+                            if (wasPlaying) videoRef.current.play();
+                          }
+                        }, 100);
+                      }}
+                    >
+                      {source.quality}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <button className="mini-player-btn" onClick={toggleMiniPlayerMode}>
             <svg viewBox="0 0 24 24">
               <path
