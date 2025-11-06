@@ -5,13 +5,16 @@ import { getRule34VideoSources } from "@/lib/rule34video";
 import { getXAnimuVideo } from "@/lib/xanimu";
 import { getYoujizzVideoSources } from "@/lib/youjizz";
 import { getHamsterVideoSources } from "@/lib/hamster";
+import { saveExternalVideoToHistory } from "@/lib/api";
+import { useUser } from "@/contexts/UserContext";
 import Loading from "@/components/Loading";
 import Layout from "@/components/layouts";
 import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
 const Watch = () => {
   const router = useRouter();
-  const { url, id, link, source: sourceType } = router.query;
+  const { user } = useUser();
+  const { url, id, link, source: sourceType, title: urlTitle, thumbnail: urlThumbnail } = router.query;
   const [selectedQuality, setSelectedQuality] = useState(null);
   const [videoKey, setVideoKey] = useState(0);
 
@@ -56,6 +59,53 @@ const Watch = () => {
 
   const videoUrl = isXAnimu ? xanimuData?.videoUrl : isYoujizz ? currentSource?.url : isHamster ? currentSource?.url : currentSource?.resolved_url;
   const videoTitle = isXAnimu ? xanimuData?.title : null;
+
+  useEffect(() => {
+    if (user && videoUrl) {
+      let videoData = {};
+
+      if (isXAnimu && xanimuData) {
+        videoData = {
+          source: 'xanimu',
+          externalId: id,
+          title: urlTitle || xanimuData.title,
+          videoUrl: xanimuData.videoUrl,
+          thumbnail: urlThumbnail || xanimuData.thumbnail || '/placeholder.jpg'
+        };
+      } else if (isYoujizz && currentSource) {
+        videoData = {
+          source: 'youjizz',
+          externalId: id,
+          title: urlTitle || currentSource.title || `Youjizz Video ${id}`,
+          videoUrl: currentSource.url,
+          thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
+          duration: currentSource.duration
+        };
+      } else if (isHamster && currentSource) {
+        videoData = {
+          source: 'hamster',
+          externalId: link,
+          title: urlTitle || currentSource.title || `Hamster Video`,
+          videoUrl: currentSource.url,
+          thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
+          duration: currentSource.duration
+        };
+      } else if (isRule34 && currentSource) {
+        videoData = {
+          source: 'rule34',
+          externalId: url,
+          title: urlTitle || currentSource.title || `Rule34 Video`,
+          videoUrl: currentSource.resolved_url,
+          thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
+          duration: currentSource.duration
+        };
+      }
+
+      if (videoData.title) {
+        saveExternalVideoToHistory(user.id, videoData);
+      }
+    }
+  }, [user, videoUrl, isXAnimu, isYoujizz, isHamster, isRule34, xanimuData, currentSource, id, link, url, urlTitle, urlThumbnail]);
 
   if (!url && !id && !link) {
     return (

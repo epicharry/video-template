@@ -179,12 +179,12 @@ const Search = () => {
                     key={video.id || index}
                     href={
                       source === "xanimu"
-                        ? `/watch?id=${encodeURIComponent(video.id)}&source=xanimu`
+                        ? `/watch?id=${encodeURIComponent(video.id)}&source=xanimu&title=${encodeURIComponent(video.title)}&thumbnail=${encodeURIComponent(video.thumbnail || video.thumb)}`
                         : source === "youjizz"
-                        ? `/watch?id=${encodeURIComponent(video.id)}&source=youjizz`
+                        ? `/watch?id=${encodeURIComponent(video.id)}&source=youjizz&title=${encodeURIComponent(video.title)}&thumbnail=${encodeURIComponent(video.thumbnail || video.thumb)}`
                         : source === "hamster"
-                        ? `/watch?link=${encodeURIComponent(video.link)}&source=hamster`
-                        : `/watch?url=${encodeURIComponent(video.url)}&source=rule34`
+                        ? `/watch?link=${encodeURIComponent(video.link)}&source=hamster&title=${encodeURIComponent(video.title)}&thumbnail=${encodeURIComponent(video.thumbnail || video.thumb)}`
+                        : `/watch?url=${encodeURIComponent(video.url)}&source=rule34&title=${encodeURIComponent(video.title)}&thumbnail=${encodeURIComponent(video.thumbnail || video.thumb)}`
                     }
                     className="group"
                   >

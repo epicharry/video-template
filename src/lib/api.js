@@ -120,9 +120,68 @@ export const saveToWatchLater = async (userId, videoId) => {
   }
 };
 
+export const createOrGetExternalVideo = async (videoData) => {
+  try {
+    const slug = videoData.slug || `external-${videoData.source}-${videoData.externalId}`;
+
+    const { data: existingVideo } = await supabase
+      .from('videos')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (existingVideo) {
+      return existingVideo.id;
+    }
+
+    const { data: systemUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', 'system')
+      .maybeSingle();
+
+    let systemUserId = systemUser?.id;
+
+    if (!systemUserId) {
+      const { data: newSystemUser } = await supabase
+        .from('users')
+        .insert([{
+          username: 'system',
+          password_hash: 'external_videos_placeholder',
+          avatar_url: '/default-user.jpg'
+        }])
+        .select('id')
+        .single();
+
+      systemUserId = newSystemUser?.id;
+    }
+
+    const { data: newVideo, error } = await supabase
+      .from('videos')
+      .insert([{
+        user_id: systemUserId,
+        title: videoData.title,
+        description: videoData.description || '',
+        slug: slug,
+        video_url: videoData.videoUrl,
+        thumbnail_url: videoData.thumbnail,
+        duration: videoData.duration || 0,
+        views: 0
+      }])
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    return newVideo.id;
+  } catch (error) {
+    console.error('Error creating external video:', error);
+    return null;
+  }
+};
+
 export const saveHistory = async (userId, videoId) => {
   try {
-    if (!userId) return;
+    if (!userId || !videoId) return;
 
     const { data: existingHistory } = await supabase
       .from('watch_history')
@@ -147,6 +206,19 @@ export const saveHistory = async (userId, videoId) => {
     }
   } catch (error) {
     console.error('Error saving history:', error);
+  }
+};
+
+export const saveExternalVideoToHistory = async (userId, videoData) => {
+  try {
+    if (!userId) return;
+
+    const videoId = await createOrGetExternalVideo(videoData);
+    if (videoId) {
+      await saveHistory(userId, videoId);
+    }
+  } catch (error) {
+    console.error('Error saving external video to history:', error);
   }
 };
 
