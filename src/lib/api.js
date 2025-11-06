@@ -60,9 +60,9 @@ export const getVideoBySlug = async (slug) => {
 
 export const likeVideo = async (userId, videoId) => {
   try {
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/toggle-video-like`;
+    const apiUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/toggle-video-like`;
     const headers = {
-      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
       'Content-Type': 'application/json',
     };
 
@@ -128,9 +128,9 @@ export const saveExternalVideoToHistory = async (userId, videoData) => {
   try {
     if (!userId) return null;
 
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-external-video`;
+    const apiUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/save-external-video`;
     const headers = {
-      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
       'Content-Type': 'application/json',
     };
 
