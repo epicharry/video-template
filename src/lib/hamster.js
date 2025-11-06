@@ -33,7 +33,14 @@ export const searchHamsterVideos = async (query, page = 1) => {
 
 export const getHamsterVideoSources = async (videoLink) => {
   try {
-    const url = `${HAMSTER_API_BASE}?v=${encodeURIComponent(videoLink)}`;
+    // Extract just the path from the full URL if needed
+    let videoPath = videoLink;
+    if (videoLink.includes('://')) {
+      const urlObj = new URL(videoLink);
+      videoPath = urlObj.pathname;
+    }
+
+    const url = `${HAMSTER_API_BASE}?v=${encodeURIComponent(videoPath)}`;
     console.log('Fetching Hamster video sources:', url);
 
     const response = await fetch(url, {
