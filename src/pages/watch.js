@@ -5,11 +5,15 @@ import { getRule34VideoSources } from "@/lib/rule34video";
 import { getXAnimuVideo } from "@/lib/xanimu";
 import { getYoujizzVideoSources } from "@/lib/youjizz";
 import { getHamsterVideoSources } from "@/lib/hamster";
-import { saveExternalVideoToHistory } from "@/lib/api";
+import { saveExternalVideoToHistory, createOrGetExternalVideo, likeVideo } from "@/lib/api";
 import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/lib/supabase";
 import Loading from "@/components/Loading";
 import Layout from "@/components/layouts";
 import CustomVideoPlayer from "@/components/CustomVideoPlayer";
+import { ThumbsUp } from "lucide-react";
+import { cn } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 const Watch = () => {
   const router = useRouter();
@@ -17,6 +21,8 @@ const Watch = () => {
   const { url, id, link, source: sourceType, title: urlTitle, thumbnail: urlThumbnail } = router.query;
   const [selectedQuality, setSelectedQuality] = useState(null);
   const [videoKey, setVideoKey] = useState(0);
+  const [currentVideoId, setCurrentVideoId] = useState(null);
+  const [isLiked, setIsLiked] = useState(false);
 
   const isXAnimu = sourceType === "xanimu";
   const isYoujizz = sourceType === "youjizz";
@@ -61,51 +67,89 @@ const Watch = () => {
   const videoTitle = isXAnimu ? xanimuData?.title : null;
 
   useEffect(() => {
-    if (user && videoUrl) {
-      let videoData = {};
+    const saveVideoData = async () => {
+      if (user && videoUrl) {
+        let videoData = {};
 
-      if (isXAnimu && xanimuData) {
-        videoData = {
-          source: 'xanimu',
-          externalId: id,
-          title: urlTitle || xanimuData.title,
-          videoUrl: xanimuData.videoUrl,
-          thumbnail: urlThumbnail || xanimuData.thumbnail || '/placeholder.jpg'
-        };
-      } else if (isYoujizz && currentSource) {
-        videoData = {
-          source: 'youjizz',
-          externalId: id,
-          title: urlTitle || currentSource.title || `Youjizz Video ${id}`,
-          videoUrl: currentSource.url,
-          thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
-          duration: currentSource.duration
-        };
-      } else if (isHamster && currentSource) {
-        videoData = {
-          source: 'hamster',
-          externalId: link,
-          title: urlTitle || currentSource.title || `Hamster Video`,
-          videoUrl: currentSource.url,
-          thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
-          duration: currentSource.duration
-        };
-      } else if (isRule34 && currentSource) {
-        videoData = {
-          source: 'rule34',
-          externalId: url,
-          title: urlTitle || currentSource.title || `Rule34 Video`,
-          videoUrl: currentSource.resolved_url,
-          thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
-          duration: currentSource.duration
-        };
-      }
+        if (isXAnimu && xanimuData) {
+          videoData = {
+            source: 'xanimu',
+            externalId: id,
+            title: urlTitle || xanimuData.title,
+            videoUrl: xanimuData.videoUrl,
+            thumbnail: urlThumbnail || xanimuData.thumbnail || '/placeholder.jpg'
+          };
+        } else if (isYoujizz && currentSource) {
+          videoData = {
+            source: 'youjizz',
+            externalId: id,
+            title: urlTitle || currentSource.title || `Youjizz Video ${id}`,
+            videoUrl: currentSource.url,
+            thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
+            duration: currentSource.duration
+          };
+        } else if (isHamster && currentSource) {
+          videoData = {
+            source: 'hamster',
+            externalId: link,
+            title: urlTitle || currentSource.title || `Hamster Video`,
+            videoUrl: currentSource.url,
+            thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
+            duration: currentSource.duration
+          };
+        } else if (isRule34 && currentSource) {
+          videoData = {
+            source: 'rule34',
+            externalId: url,
+            title: urlTitle || currentSource.title || `Rule34 Video`,
+            videoUrl: currentSource.resolved_url,
+            thumbnail: urlThumbnail || currentSource.thumbnail || '/placeholder.jpg',
+            duration: currentSource.duration
+          };
+        }
 
-      if (videoData.title) {
-        saveExternalVideoToHistory(user.id, videoData);
+        if (videoData.title) {
+          await saveExternalVideoToHistory(user.id, videoData);
+          const videoId = await createOrGetExternalVideo(videoData);
+          setCurrentVideoId(videoId);
+        }
       }
-    }
+    };
+
+    saveVideoData();
   }, [user, videoUrl, isXAnimu, isYoujizz, isHamster, isRule34, xanimuData, currentSource, id, link, url, urlTitle, urlThumbnail]);
+
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (user?.id && currentVideoId) {
+        const { data } = await supabase
+          .from('video_likes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('video_id', currentVideoId)
+          .maybeSingle();
+        setIsLiked(!!data);
+      }
+    };
+
+    checkLikeStatus();
+  }, [user?.id, currentVideoId]);
+
+  const handleLikeVideo = async () => {
+    if (!user) {
+      toast.error('Please sign in to like videos');
+      router.push('/sign-in');
+      return;
+    }
+
+    if (!currentVideoId) {
+      toast.error('Video not loaded yet');
+      return;
+    }
+
+    await likeVideo(user.id, currentVideoId);
+    setIsLiked(!isLiked);
+  };
 
   if (!url && !id && !link) {
     return (
@@ -144,9 +188,23 @@ const Watch = () => {
             />
           </div>
 
-          {videoTitle && (
+          {(videoTitle || urlTitle) && (
             <div className="mt-4 bg-neutral-900 rounded-lg p-4">
-              <h1 className="text-xl font-semibold">{videoTitle}</h1>
+              <h1 className="text-xl font-semibold mb-3">{videoTitle || urlTitle}</h1>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleLikeVideo}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
+                    isLiked
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-neutral-800 hover:bg-neutral-700"
+                  )}
+                >
+                  <ThumbsUp size={18} fill={isLiked ? "currentColor" : "none"} />
+                  <span>{isLiked ? "Liked" : "Like"}</span>
+                </button>
+              </div>
             </div>
           )}
 
