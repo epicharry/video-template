@@ -8,6 +8,13 @@ import { useState } from "react";
 const VideoCard = ({ vid, uploader, menuItems, mutate }) => {
   const [show, setShow] = useState(false);
 
+  // ✅ Fix: Convert protocol-relative URLs "//" → "https://"
+  const normalizeUrl = (url) => {
+    if (!url) return url;
+    if (url.startsWith("//")) return "https:" + url;
+    return url;
+  };
+
   const itemAction = async (e, action) => {
     e.preventDefault();
     e.stopPropagation();
@@ -50,7 +57,7 @@ const VideoCard = ({ vid, uploader, menuItems, mutate }) => {
           />
         ) : vid.thumbnail_url ? (
           <Image
-            src={vid.thumbnail_url}
+            src={normalizeUrl(vid.thumbnail_url)}   // ✅ normalized
             alt="preview"
             fill
             className="object-cover"
@@ -64,25 +71,31 @@ const VideoCard = ({ vid, uploader, menuItems, mutate }) => {
           />
         )}
       </div>
+
       <div className="p-4 flex gap-8 flex-1">
         <div className="flex-1 space-y-1">
           <h2>{vid.title}</h2>
           <p className="text-neutral-400">{vid.description}</p>
+
           <div className="flex items-center gap-1.5 mt-2">
             <Image
-              src={uploader.uploaderAvatar || "/default-user.jpg"}
+              src={normalizeUrl(uploader?.uploaderAvatar) || "/default-user.jpg"}   // ✅ normalized
               alt="default user image"
               width={30}
               height={30}
               className="rounded-full self-baseline"
             />
+
             <p className="text-neutral-400">
-              {uploader.uploaderName} &#x2022;{" "}
+              {uploader?.uploaderName} •{" "}
             </p>
+
             <p className="text-neutral-400 text-xs">
-              {vid.created_at ? formatDistanceToNow(new Date(vid.created_at), {
-                addSuffix: true,
-              }) : 'Recently'}
+              {vid.created_at
+                ? formatDistanceToNow(new Date(vid.created_at), {
+                    addSuffix: true,
+                  })
+                : "Recently"}
             </p>
           </div>
         </div>
