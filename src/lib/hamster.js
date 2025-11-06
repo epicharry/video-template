@@ -1,9 +1,10 @@
-const HAMSTER_API_BASE = 'https://harryvibes.free.nf/hamster.php';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const HAMSTER_PROXY_URL = `${SUPABASE_URL}/functions/v1/hamster-proxy`;
 
 export const searchHamsterVideos = async (query, page = 1) => {
   try {
-    const url = `${HAMSTER_API_BASE}?q=${encodeURIComponent(query)}&page=${page}`;
-    console.log('Fetching Hamster:', url);
+    const url = `${HAMSTER_PROXY_URL}?q=${encodeURIComponent(query)}&page=${page}`;
+    console.log('Fetching Hamster via proxy:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -33,8 +34,8 @@ export const searchHamsterVideos = async (query, page = 1) => {
 
 export const getHamsterVideoSources = async (videoLink) => {
   try {
-    const url = `${HAMSTER_API_BASE}?v=${encodeURIComponent(videoLink)}`;
-    console.log('Fetching Hamster video sources:', url);
+    const url = `${HAMSTER_PROXY_URL}?v=${encodeURIComponent(videoLink)}`;
+    console.log('Fetching Hamster video sources via proxy:', url);
 
     const response = await fetch(url, {
       method: 'GET',
