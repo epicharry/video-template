@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { searchYoujizzVideos, getYoujizzVideoSources, getHighestQualitySource as getYoujizzHighestQuality } from './youjizz';
 import { searchXAnimuVideos, getXAnimuVideo } from './xanimu';
 import { searchRule34Videos, getRule34VideoSources, getHighestQualitySource as getRule34HighestQuality } from './rule34video';
+import { searchHamsterVideos, getHamsterVideoSources, getHighestQualitySource as getHamsterHighestQuality } from './hamster';
 
 export const getAllVideos = async () => {
   try {
@@ -324,6 +325,8 @@ export const searchExternalVideos = async (query, page = 1, source = 'youjizz') 
         return await searchXAnimuVideos(query, page);
       case 'rule34':
         return await searchRule34Videos(query, page);
+      case 'hamster':
+        return await searchHamsterVideos(query, page);
       default:
         throw new Error(`Unknown source: ${source}`);
     }
@@ -342,6 +345,8 @@ export const getExternalVideoSources = async (videoId, source = 'youjizz') => {
         return await getXAnimuVideo(videoId);
       case 'rule34':
         return await getRule34VideoSources(videoId);
+      case 'hamster':
+        return await getHamsterVideoSources(videoId);
       default:
         throw new Error(`Unknown source: ${source}`);
     }
@@ -361,6 +366,8 @@ export const getExternalHighestQuality = async (videoId, source = 'youjizz') => 
         return video.videoUrl;
       case 'rule34':
         return await getRule34HighestQuality(videoId);
+      case 'hamster':
+        return await getHamsterHighestQuality(videoId);
       default:
         throw new Error(`Unknown source: ${source}`);
     }

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { searchRule34Videos } from "@/lib/rule34video";
 import { searchXAnimuVideos } from "@/lib/xanimu";
 import { searchYoujizzVideos } from "@/lib/youjizz";
+import { searchHamsterVideos } from "@/lib/hamster";
 import Loading from "@/components/Loading";
 import Link from "next/link";
 import Image from "next/image";
@@ -23,6 +24,8 @@ const Search = () => {
         return searchXAnimuVideos(q, currentPage);
       } else if (source === "youjizz") {
         return searchYoujizzVideos(q, currentPage);
+      } else if (source === "hamster") {
+        return searchHamsterVideos(q, currentPage);
       }
       return searchRule34Videos(q, currentPage);
     },
@@ -39,7 +42,7 @@ const Search = () => {
   };
 
   const handleNextPage = () => {
-    const hasResults = source === "xanimu"
+    const hasResults = (source === "xanimu" || source === "hamster")
       ? data?.results && data.results.length > 0
       : data?.videos && data.videos.length > 0;
 
@@ -48,11 +51,11 @@ const Search = () => {
     }
   };
 
-  const hasMorePages = source === "xanimu"
+  const hasMorePages = (source === "xanimu" || source === "hamster")
     ? data?.hasMore
     : data?.videos && data.videos.length > 0;
 
-  const videos = source === "xanimu" ? data?.results : data?.videos;
+  const videos = (source === "xanimu" || source === "hamster") ? data?.results : data?.videos;
 
   return (
     <div className="max-w-7xl mx-auto px-4">
@@ -87,6 +90,16 @@ const Search = () => {
             }`}
           >
             Youjizz
+          </button>
+          <button
+            onClick={() => setSource("hamster")}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              source === "hamster"
+                ? "bg-red-600"
+                : "bg-neutral-800 hover:bg-neutral-700"
+            }`}
+          >
+            Hamster
           </button>
         </div>
         <form onSubmit={handleSearch} className="flex gap-2">
@@ -155,6 +168,7 @@ const Search = () => {
                 Showing results for &quot;{q}&quot; - Page {currentPage} ({
                   source === "xanimu" ? "XAnimu" :
                   source === "youjizz" ? "Youjizz" :
+                  source === "hamster" ? "Hamster" :
                   "Rule34Video"
                 })
               </div>
@@ -168,6 +182,8 @@ const Search = () => {
                         ? `/watch?id=${encodeURIComponent(video.id)}&source=xanimu`
                         : source === "youjizz"
                         ? `/watch?id=${encodeURIComponent(video.id)}&source=youjizz`
+                        : source === "hamster"
+                        ? `/watch?link=${encodeURIComponent(video.link)}&source=hamster`
                         : `/watch?url=${encodeURIComponent(video.url)}&source=rule34`
                     }
                     className="group"
@@ -185,11 +201,16 @@ const Search = () => {
                           {video.duration}
                         </div>
                       )}
+                      {source === "hamster" && video.length && (
+                        <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs">
+                          {video.length}
+                        </div>
+                      )}
                     </div>
                     <h3 className="font-medium text-sm line-clamp-2 mb-1">
                       {video.title}
                     </h3>
-                    {(source === "rule34" || source === "youjizz") && (
+                    {(source === "rule34" || source === "youjizz" || source === "hamster") && (
                       <>
                         <div className="flex items-center gap-2 text-xs text-neutral-400">
                           <span>{video.views} views</span>

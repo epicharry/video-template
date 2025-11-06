@@ -4,18 +4,20 @@ import { useQuery } from "@tanstack/react-query";
 import { getRule34VideoSources } from "@/lib/rule34video";
 import { getXAnimuVideo } from "@/lib/xanimu";
 import { getYoujizzVideoSources } from "@/lib/youjizz";
+import { getHamsterVideoSources } from "@/lib/hamster";
 import Loading from "@/components/Loading";
 import Layout from "@/components/layouts";
 import CustomVideoPlayer from "@/components/CustomVideoPlayer";
 
 const Watch = () => {
   const router = useRouter();
-  const { url, id, source: sourceType } = router.query;
+  const { url, id, link, source: sourceType } = router.query;
   const [selectedQuality, setSelectedQuality] = useState(null);
   const [videoKey, setVideoKey] = useState(0);
 
   const isXAnimu = sourceType === "xanimu";
   const isYoujizz = sourceType === "youjizz";
+  const isHamster = sourceType === "hamster";
   const isRule34 = sourceType === "rule34" || (!sourceType && url);
 
   const { data: rule34Data, isLoading: rule34Loading, error: rule34Error } = useQuery({
@@ -36,9 +38,15 @@ const Watch = () => {
     enabled: isYoujizz && !!id,
   });
 
-  const sources = isXAnimu ? null : isYoujizz ? youjizzData : rule34Data;
-  const isLoading = isRule34 ? rule34Loading : isYoujizz ? youjizzLoading : xanimuLoading;
-  const error = isRule34 ? rule34Error : isYoujizz ? youjizzError : xanimuError;
+  const { data: hamsterData, isLoading: hamsterLoading, error: hamsterError } = useQuery({
+    queryKey: ["hamster-video-sources", link],
+    queryFn: () => getHamsterVideoSources(link),
+    enabled: isHamster && !!link,
+  });
+
+  const sources = isXAnimu ? null : isYoujizz ? youjizzData : isHamster ? hamsterData : rule34Data;
+  const isLoading = isRule34 ? rule34Loading : isYoujizz ? youjizzLoading : isHamster ? hamsterLoading : xanimuLoading;
+  const error = isRule34 ? rule34Error : isYoujizz ? youjizzError : isHamster ? hamsterError : xanimuError;
 
   const currentSource = isXAnimu
     ? null
@@ -46,7 +54,7 @@ const Watch = () => {
     ? sources?.find((s) => s.quality === selectedQuality)
     : sources?.[0];
 
-  const videoUrl = isXAnimu ? xanimuData?.videoUrl : isYoujizz ? currentSource?.url : currentSource?.resolved_url;
+  const videoUrl = isXAnimu ? xanimuData?.videoUrl : isYoujizz ? currentSource?.url : isHamster ? currentSource?.url : currentSource?.resolved_url;
   const videoTitle = isXAnimu ? xanimuData?.title : null;
 
   useEffect(() => {
@@ -55,7 +63,7 @@ const Watch = () => {
     }
   }, [videoUrl]);
 
-  if (!url && !id) {
+  if (!url && !id && !link) {
     return (
       <div className="text-center py-20 text-neutral-400">
         No video provided
@@ -71,7 +79,7 @@ const Watch = () => {
     );
   }
 
-  if (error || (isRule34 && (!sources || sources.length === 0)) || (isYoujizz && (!sources || sources.length === 0)) || (isXAnimu && !xanimuData)) {
+  if (error || (isRule34 && (!sources || sources.length === 0)) || (isYoujizz && (!sources || sources.length === 0)) || (isHamster && (!sources || sources.length === 0)) || (isXAnimu && !xanimuData)) {
     return (
       <div className="text-center py-20 text-red-400">
         Failed to load video. Please try again.
@@ -96,7 +104,7 @@ const Watch = () => {
             </div>
           )}
 
-          {(isRule34 || isYoujizz) && sources && sources.length > 0 && (
+          {(isRule34 || isYoujizz || isHamster) && sources && sources.length > 0 && (
             <div className="mt-4 bg-neutral-900 rounded-lg p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Quality Settings</h2>
@@ -125,8 +133,8 @@ const Watch = () => {
           <div className="mt-4 bg-neutral-900 rounded-lg p-4">
             <h3 className="font-semibold mb-2">About this video</h3>
             <div className="text-sm text-neutral-400 space-y-1">
-              <p>Source: {isXAnimu ? "XAnimu" : isYoujizz ? "Youjizz" : "Rule34Video"}</p>
-              {(isRule34 || isYoujizz) && currentSource && (
+              <p>Source: {isXAnimu ? "XAnimu" : isYoujizz ? "Youjizz" : isHamster ? "Hamster" : "Rule34Video"}</p>
+              {(isRule34 || isYoujizz || isHamster) && currentSource && (
                 <>
                   {isRule34 && <p>Format: {currentSource.ext?.toUpperCase()}</p>}
                   <p>Available qualities: {sources.map(s => s.quality).join(", ")}</p>
