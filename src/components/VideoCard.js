@@ -11,7 +11,7 @@ const VideoCard = ({ vid, uploader, menuItems, mutate }) => {
   const itemAction = async (e, action) => {
     e.preventDefault();
     e.stopPropagation();
-    mutate({ videoId: vid._id, action });
+    mutate({ videoId: vid.id, action });
     setShow(false);
   };
 
@@ -43,10 +43,17 @@ const VideoCard = ({ vid, uploader, menuItems, mutate }) => {
       className="border border-neutral-700 rounded-lg overflow-hidden flex flex-col md:flex-row"
     >
       <div className="w-full md:w-80 relative h-44 overflow-hidden">
-        {vid.hlsUrl ? (
+        {vid.hls_url ? (
           <VideoPlayer
-            src={vid.hlsUrl}
+            src={vid.hls_url}
             className="w-full h-full object-cover"
+          />
+        ) : vid.thumbnail_url ? (
+          <Image
+            src={vid.thumbnail_url}
+            alt="preview"
+            fill
+            className="object-cover"
           />
         ) : (
           <Image
@@ -73,9 +80,9 @@ const VideoCard = ({ vid, uploader, menuItems, mutate }) => {
               {uploader.uploaderName} &#x2022;{" "}
             </p>
             <p className="text-neutral-400 text-xs">
-              {formatDistanceToNow(new Date(vid.createdAt), {
+              {vid.created_at ? formatDistanceToNow(new Date(vid.created_at), {
                 addSuffix: true,
-              })}
+              }) : 'Recently'}
             </p>
           </div>
         </div>
