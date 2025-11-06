@@ -5,7 +5,7 @@ import { getRule34VideoSources } from "@/lib/rule34video";
 import { getXAnimuVideo } from "@/lib/xanimu";
 import { getYoujizzVideoSources } from "@/lib/youjizz";
 import { getHamsterVideoSources } from "@/lib/hamster";
-import { saveExternalVideoToHistory, createOrGetExternalVideo, likeVideo } from "@/lib/api";
+import { saveExternalVideoToHistory, likeVideo } from "@/lib/api";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/lib/supabase";
 import Loading from "@/components/Loading";
@@ -109,8 +109,7 @@ const Watch = () => {
         }
 
         if (videoData.title) {
-          await saveExternalVideoToHistory(user.id, videoData);
-          const videoId = await createOrGetExternalVideo(videoData);
+          const videoId = await saveExternalVideoToHistory(user.id, videoData);
           setCurrentVideoId(videoId);
         }
       }
@@ -147,8 +146,10 @@ const Watch = () => {
       return;
     }
 
-    await likeVideo(user.id, currentVideoId);
-    setIsLiked(!isLiked);
+    const result = await likeVideo(user.id, currentVideoId);
+    if (result !== null) {
+      setIsLiked(result);
+    }
   };
 
   if (!url && !id && !link) {

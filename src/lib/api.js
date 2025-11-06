@@ -60,32 +60,36 @@ export const getVideoBySlug = async (slug) => {
 
 export const likeVideo = async (userId, videoId) => {
   try {
-    const { data: existingLike } = await supabase
-      .from('video_likes')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('video_id', videoId)
-      .maybeSingle();
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/toggle-video-like`;
+    const headers = {
+      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    };
 
-    if (existingLike) {
-      const { error } = await supabase
-        .from('video_likes')
-        .delete()
-        .eq('id', existingLike.id);
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ userId, videoId })
+    });
 
-      if (error) throw error;
-      toast.success('Removed from liked videos');
-    } else {
-      const { error } = await supabase
-        .from('video_likes')
-        .insert([{ user_id: userId, video_id: videoId }]);
-
-      if (error) throw error;
-      toast.success('Added to liked videos');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to toggle video like');
     }
+
+    const result = await response.json();
+
+    if (result.liked) {
+      toast.success('Added to liked videos');
+    } else {
+      toast.success('Removed from liked videos');
+    }
+
+    return result.liked;
   } catch (error) {
     console.error('Error liking video:', error);
     toast.error('Failed to update like');
+    return null;
   }
 };
 
@@ -120,105 +124,32 @@ export const saveToWatchLater = async (userId, videoId) => {
   }
 };
 
-export const createOrGetExternalVideo = async (videoData) => {
-  try {
-    const slug = videoData.slug || `external-${videoData.source}-${videoData.externalId}`;
-
-    const { data: existingVideo } = await supabase
-      .from('videos')
-      .select('id')
-      .eq('slug', slug)
-      .maybeSingle();
-
-    if (existingVideo) {
-      return existingVideo.id;
-    }
-
-    const { data: systemUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('username', 'system')
-      .maybeSingle();
-
-    let systemUserId = systemUser?.id;
-
-    if (!systemUserId) {
-      const { data: newSystemUser } = await supabase
-        .from('users')
-        .insert([{
-          username: 'system',
-          password_hash: 'external_videos_placeholder',
-          avatar_url: '/default-user.jpg'
-        }])
-        .select('id')
-        .single();
-
-      systemUserId = newSystemUser?.id;
-    }
-
-    const { data: newVideo, error } = await supabase
-      .from('videos')
-      .insert([{
-        user_id: systemUserId,
-        title: videoData.title,
-        description: videoData.description || '',
-        slug: slug,
-        video_url: videoData.videoUrl,
-        thumbnail_url: videoData.thumbnail,
-        duration: videoData.duration || 0,
-        views: 0
-      }])
-      .select('id')
-      .single();
-
-    if (error) throw error;
-    return newVideo.id;
-  } catch (error) {
-    console.error('Error creating external video:', error);
-    return null;
-  }
-};
-
-export const saveHistory = async (userId, videoId) => {
-  try {
-    if (!userId || !videoId) return;
-
-    const { data: existingHistory } = await supabase
-      .from('watch_history')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('video_id', videoId)
-      .maybeSingle();
-
-    if (existingHistory) {
-      const { error } = await supabase
-        .from('watch_history')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', existingHistory.id);
-
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from('watch_history')
-        .insert([{ user_id: userId, video_id: videoId }]);
-
-      if (error) throw error;
-    }
-  } catch (error) {
-    console.error('Error saving history:', error);
-  }
-};
-
 export const saveExternalVideoToHistory = async (userId, videoData) => {
   try {
-    if (!userId) return;
+    if (!userId) return null;
 
-    const videoId = await createOrGetExternalVideo(videoData);
-    if (videoId) {
-      await saveHistory(userId, videoId);
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-external-video`;
+    const headers = {
+      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    };
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ userId, videoData })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to save external video');
     }
+
+    const result = await response.json();
+    return result.videoId;
   } catch (error) {
     console.error('Error saving external video to history:', error);
+    return null;
   }
 };
 
