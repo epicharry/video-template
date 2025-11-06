@@ -22,7 +22,7 @@ export const searchHamsterVideos = async (query, page = 1) => {
     return {
       query: data.query,
       page: data.current_page,
-      videos: data.results || [],
+      results: data.results || [],
       hasMore: data.next_page !== null,
     };
   } catch (error) {
