@@ -11,6 +11,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'rule34video.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdne-pics.youjizz.com',   // ✅ Add this
+      },
     ],
   },
 };
