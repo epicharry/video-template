@@ -1,13 +1,19 @@
 import Button from "@/components/Button";
 import Layout from "@/components/layouts";
 import TextField from "@/components/TextField";
-import { registerSchema } from "@/schema/registerSchema";
 import { yupResolver } from "@hookform/resolvers/yup";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { FormProvider, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { supabase } from "@/lib/supabase";
+import { register as registerUser } from "@/lib/auth";
+import * as yup from "yup";
+
+const registerSchema = yup.object().shape({
+  username: yup.string().required("Username is required").min(3, "Username must be at least 3 characters"),
+  password: yup.string().required("Password is required").min(6, "Password must be at least 6 characters"),
+  cpassword: yup.string().required("Please confirm your password").oneOf([yup.ref('password'), null], 'Passwords must match'),
+});
 
 const Register = () => {
   const methods = useForm({
@@ -23,28 +29,10 @@ const Register = () => {
   } = methods;
 
   const onSubmit = async (data) => {
-    const { cpassword, username, email, password } = data;
+    const { username, password } = data;
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) throw authError;
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: authData.user.id,
-            username,
-            avatar_url: null,
-          },
-        ]);
-
-      if (profileError) throw profileError;
-
+      await registerUser(username, password);
       reset();
       toast.success("Registered successfully, Please sign in.");
       router.push("/sign-in");
@@ -72,21 +60,16 @@ const Register = () => {
               error={errors.username?.message}
             />
             <TextField
-              label="Email"
-              name="useremail"
-              {...register("email")}
-              error={errors.email?.message}
-            />
-            <TextField
               label="Password"
               name="password"
+              type="password"
               {...register("password")}
               error={errors.password?.message}
             />
-
             <TextField
               label="Confirm Password"
               name="cpassword"
+              type="password"
               {...register("cpassword")}
               error={errors.cpassword?.message}
             />

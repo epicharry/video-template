@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, useContext } from "react";
-import { supabase } from "@/lib/supabase";
+import { getAuthUser, clearAuthData, getUserProfile } from "@/lib/auth";
 
 const UserContext = createContext(null);
 
@@ -9,55 +9,38 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
+    const loadUser = async () => {
+      try {
+        const authUser = getAuthUser();
+        if (authUser) {
+          setUser(authUser);
+          const userProfile = await getUserProfile(authUser.id);
+          setProfile(userProfile);
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+        clearAuthData();
+      } finally {
         setLoading(false);
       }
-    });
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      (async () => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
-      })();
-    });
-
-    return () => subscription.unsubscribe();
+    loadUser();
   }, []);
 
-  const fetchProfile = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) throw error;
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    await supabase.auth.signOut();
+  const logout = () => {
+    clearAuthData();
     setUser(null);
     setProfile(null);
   };
 
+  const updateUser = (newUser) => {
+    setUser(newUser);
+    setProfile(newUser);
+  };
+
   return (
-    <UserContext.Provider value={{ user, profile, loading, logout }}>
+    <UserContext.Provider value={{ user, profile, loading, logout, updateUser }}>
       {children}
     </UserContext.Provider>
   );

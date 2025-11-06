@@ -48,8 +48,8 @@ const WatchLater = () => {
                 key={item.video.id}
                 vid={item.video}
                 uploader={{
-                  uploaderName: item.video.profile?.username,
-                  uploaderAvatar: item.video.profile?.avatar_url,
+                  uploaderName: item.video.user?.username,
+                  uploaderAvatar: item.video.user?.avatar_url,
                 }}
                 menuItems={menuItems}
                 mutate={mutate}

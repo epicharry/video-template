@@ -11,7 +11,7 @@ export const getAllVideos = async () => {
       .from('videos')
       .select(`
         *,
-        profile:profiles(username, avatar_url)
+        user:users(username, avatar_url)
       `)
       .order('created_at', { ascending: false });
 
@@ -45,7 +45,7 @@ export const getVideoBySlug = async (slug) => {
       .from('videos')
       .select(`
         *,
-        profile:profiles(id, username, avatar_url)
+        user:users(id, username, avatar_url)
       `)
       .eq('slug', slug)
       .maybeSingle();
@@ -158,7 +158,7 @@ export const fetchHistory = async (userId) => {
         *,
         video:videos(
           *,
-          profile:profiles(username, avatar_url)
+          user:users(username, avatar_url)
         )
       `)
       .eq('user_id', userId)
@@ -196,7 +196,7 @@ export const getLikedVideos = async (userId) => {
         *,
         video:videos(
           *,
-          profile:profiles(username, avatar_url)
+          user:users(username, avatar_url)
         )
       `)
       .eq('user_id', userId)
@@ -218,11 +218,11 @@ export const getWatchLater = async (userId) => {
         *,
         video:videos(
           *,
-          profile:profiles(username, avatar_url)
+          user:users(username, avatar_url)
         )
       `)
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false});
 
     if (error) throw error;
     return data || [];
@@ -232,89 +232,6 @@ export const getWatchLater = async (userId) => {
   }
 };
 
-export const subscribe = async (subscriberId, channelId) => {
-  try {
-    const { data: existingSub } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('subscriber_id', subscriberId)
-      .eq('channel_id', channelId)
-      .maybeSingle();
-
-    if (existingSub) {
-      const { error } = await supabase
-        .from('subscriptions')
-        .delete()
-        .eq('id', existingSub.id);
-
-      if (error) throw error;
-      toast.success('Unsubscribed');
-      return false;
-    } else {
-      const { error } = await supabase
-        .from('subscriptions')
-        .insert([{ subscriber_id: subscriberId, channel_id: channelId }]);
-
-      if (error) throw error;
-      toast.success('Subscribed');
-      return true;
-    }
-  } catch (error) {
-    console.error('Error subscribing:', error);
-    toast.error('Failed to update subscription');
-    return null;
-  }
-};
-
-export const getSubscriptionStatus = async (subscriberId, channelId) => {
-  try {
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('subscriber_id', subscriberId)
-      .eq('channel_id', channelId)
-      .maybeSingle();
-
-    return !!data;
-  } catch (error) {
-    console.error('Error checking subscription:', error);
-    return false;
-  }
-};
-
-export const getMySubscriptions = async (subscriberId) => {
-  try {
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select(`
-        *,
-        channel:profiles!subscriptions_channel_id_fkey(id, username, avatar_url)
-      `)
-      .eq('subscriber_id', subscriberId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching subscriptions:', error);
-    return [];
-  }
-};
-
-export const getSubscriberCount = async (channelId) => {
-  try {
-    const { count, error } = await supabase
-      .from('subscriptions')
-      .select('*', { count: 'exact', head: true })
-      .eq('channel_id', channelId);
-
-    if (error) throw error;
-    return count || 0;
-  } catch (error) {
-    console.error('Error fetching subscriber count:', error);
-    return 0;
-  }
-};
 
 export const searchExternalVideos = async (query, page = 1, source = 'youjizz') => {
   try {
