@@ -7,12 +7,15 @@ import { useUser } from "@/contexts/UserContext";
 import { likeVideo as likeVideoAPI, saveToWatchLater, saveHistory, subscribe, getSubscriptionStatus, getSubscriberCount } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 const VideoDescription = ({ media }) => {
   const router = useRouter();
   const { user } = useUser();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriberCount, setSubscriberCount] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const { data: subStatus } = useQuery({
     queryKey: ['subscription-status', user?.id, media?.profile?.id],
@@ -38,6 +41,35 @@ const VideoDescription = ({ media }) => {
     }
   }, [subCount]);
 
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (user?.id && media?.id) {
+        const { data } = await supabase
+          .from('video_likes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('video_id', media.id)
+          .maybeSingle();
+        setIsLiked(!!data);
+      }
+    };
+
+    const checkSaveStatus = async () => {
+      if (user?.id && media?.id) {
+        const { data } = await supabase
+          .from('watch_later')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('video_id', media.id)
+          .maybeSingle();
+        setIsSaved(!!data);
+      }
+    };
+
+    checkLikeStatus();
+    checkSaveStatus();
+  }, [user?.id, media?.id]);
+
   const checkAuth = () => {
     if (!user) {
       router.push("/sign-in");
@@ -49,11 +81,13 @@ const VideoDescription = ({ media }) => {
   const handleLikeVideo = async () => {
     if (!checkAuth()) return;
     await likeVideoAPI(user.id, media.id);
+    setIsLiked(!isLiked);
   };
 
   const handleSaveVideo = async () => {
     if (!checkAuth()) return;
     await saveToWatchLater(user.id, media.id);
+    setIsSaved(!isSaved);
   };
 
   const updateSubscription = async () => {
@@ -105,21 +139,27 @@ const VideoDescription = ({ media }) => {
           <Button
             onClick={handleLikeVideo}
             variant="tertiary"
-            className="items-center gap-1 rounded-full text-xs font-medium self-center py-1.5 leading-6"
+            className={cn(
+              "items-center gap-1 rounded-full text-xs font-medium self-center py-1.5 leading-6",
+              isLiked && "bg-red-600 hover:bg-red-700"
+            )}
           >
             <div className="flex items-center gap-1">
-              <ThumbsUp size={18} />
-              <span className="">Like</span>
+              <ThumbsUp size={18} fill={isLiked ? "currentColor" : "none"} />
+              <span className="">{isLiked ? "Liked" : "Like"}</span>
             </div>
           </Button>
           <Button
             onClick={handleSaveVideo}
             variant="tertiary"
-            className="items-center gap-1 rounded-full text-xs font-medium ml-2 self-center py-1.5 leading-6"
+            className={cn(
+              "items-center gap-1 rounded-full text-xs font-medium ml-2 self-center py-1.5 leading-6",
+              isSaved && "bg-blue-600 hover:bg-blue-700"
+            )}
           >
             <div className="flex items-center gap-1">
-              <Bookmark size={18} />
-              <span className="">Save to Watch List</span>
+              <Bookmark size={18} fill={isSaved ? "currentColor" : "none"} />
+              <span className="">{isSaved ? "Saved" : "Save to Watch List"}</span>
             </div>
           </Button>
         </div>

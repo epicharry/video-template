@@ -8,9 +8,12 @@ import { useRouter } from "next/router";
 import { FormProvider, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
+import { useEffect } from "react";
+import { useUser } from "@/contexts/UserContext";
 
 const SignIn = () => {
   const router = useRouter();
+  const { user, loading } = useUser();
   const methods = useForm({
     resolver: yupResolver(loginSchema),
   });
@@ -20,6 +23,12 @@ const SignIn = () => {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = methods;
+
+  useEffect(() => {
+    if (user && !loading) {
+      router.push("/");
+    }
+  }, [user, loading, router]);
 
   const onSubmit = async (data) => {
     const { password, email } = data;
@@ -33,7 +42,10 @@ const SignIn = () => {
       if (error) throw error;
 
       toast.success("Signed in successfully");
-      router.push("/account");
+
+      setTimeout(() => {
+        router.push("/");
+      }, 500);
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to sign in");

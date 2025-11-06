@@ -10,9 +10,25 @@ import {
   MediaVolumeRange,
 } from "media-chrome/react";
 import ReactPlayer from "react-player";
+import { useEffect, useRef } from "react";
+import { useUser } from "@/contexts/UserContext";
+import { saveHistory } from "@/lib/api";
 
 export default function MainVideoPlayer({ media }) {
-  const { hlsUrl } = media;
+  const { hlsUrl, id } = media;
+  const { user } = useUser();
+  const hasTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (user && id && !hasTrackedRef.current) {
+      const timer = setTimeout(() => {
+        saveHistory(user.id, id);
+        hasTrackedRef.current = true;
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [user, id]);
 
   return (
     <MediaController
