@@ -1,4 +1,5 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const HAMSTER_PROXY_URL = `${SUPABASE_URL}/functions/v1/hamster-proxy`;
 
 export const searchHamsterVideos = async (query, page = 1) => {
@@ -10,6 +11,8 @@ export const searchHamsterVideos = async (query, page = 1) => {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
       },
     });
 
@@ -41,6 +44,8 @@ export const getHamsterVideoSources = async (videoLink) => {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
       },
     });
 
